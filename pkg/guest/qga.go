@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,16 +57,34 @@ func getGuestExecStatusArguments(pid int) GuestExecStatusArguments {
 		Pid: pid,
 	}
 }
-func (guest *Guest) Exec(command string) (string, string) {
+
+type ExecResult struct {
+	Pid     int
+	OutData string
+	ErrData string
+}
+
+func (guest *Guest) Exec(command string, wait bool) ExecResult {
 	qemuAgentCommand := QemuAgentCommand{
 		Execute:   "guest-exec",
 		Arguments: getGuestExecArguments(command),
 	}
 	jsonData, _ := json.Marshal(qemuAgentCommand)
-	result, _ := guest.runQemuAgentCommand(jsonData)
+	result, err := guest.runQemuAgentCommand(jsonData)
+	if err != nil {
+		return ExecResult{}
+	}
 	var qgaExecResult QgaExecResult
 	json.Unmarshal([]byte(result), &qgaExecResult)
-	return guest.getExecStatusOutput(qgaExecResult.Return.Pid)
+	if !wait {
+		return ExecResult{Pid: qgaExecResult.Return.Pid}
+	}
+	outData, errData := guest.getExecStatusOutput(qgaExecResult.Return.Pid)
+	return ExecResult{
+		Pid:     qgaExecResult.Return.Pid,
+		OutData: outData,
+		ErrData: errData,
+	}
 }
 
 func (guest *Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
@@ -90,15 +109,58 @@ func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
 	}
 	jsonData, _ := json.Marshal(qemuAgentCommand)
 	var qgaExecResult QgaExecStatusResult
+	startTime := time.Now()
 	for {
 		result, _ := guest.runQemuAgentCommand(jsonData)
 		json.Unmarshal([]byte(result), &qgaExecResult)
 		if qgaExecResult.Return.Exited {
 			break
 		}
-		time.Sleep(time.Second)
+		if guest.QGATimeout > 0 &&
+			time.Since(startTime).Seconds() >= float64(time.Second)*float64(guest.QGATimeout) {
+			break
+		}
+		time.Sleep(time.Second * 2)
 	}
 	outDecode, _ := base64.StdEncoding.DecodeString(qgaExecResult.Return.OutData)
 	errDecode, _ := base64.StdEncoding.DecodeString(qgaExecResult.Return.ErrData)
 	return string(outDecode), string(errDecode)
+}
+
+type AddrInfo struct {
+	Famaliy   string `json:"family"`
+	Local     string `json:"local"`
+	Label     string `json:"label"`
+	Broadcast string `json:"broadcast"`
+}
+
+type IPAddress struct {
+	IFIndex  int        `json:"ifindex"`
+	AddrInfo []AddrInfo `json:"addr_info"`
+}
+
+func (guest *Guest) GetIpaddrs() []string {
+	execResult := guest.Exec("ip a", true)
+	reg := regexp.MustCompile("inet [0-9.]+")
+	matchedIPAddresses := reg.FindAllString(execResult.OutData, -1)
+	ipAddresses := []string{}
+	for i := 0; i < len(matchedIPAddresses); i++ {
+		if strings.Contains(matchedIPAddresses[i], "127.0.0.1") {
+			continue
+		}
+		ipAddresses = append(ipAddresses, strings.Split(matchedIPAddresses[i], " ")[1])
+	}
+	return ipAddresses
+}
+
+// Return pid
+func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
+	cmd := fmt.Sprintf("iperf3 -s --bind %s --logfile %s", serverIp, logfile)
+	return guest.Exec(cmd, false)
+}
+
+// Return pid
+func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string) ExecResult {
+	cmd := fmt.Sprintf("iperf3 -c %s --bind %s --logfile %s", serverIp, clientIp, logfile)
+	return guest.Exec(cmd, false)
 }

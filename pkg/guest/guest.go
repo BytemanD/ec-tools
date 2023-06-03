@@ -9,9 +9,10 @@ import (
 type Guest struct {
 	Connection string
 	Domain     string
+	ByUUID     bool
+	QGATimeout int
 	conn       libvirt.Connect
 	domain     libvirt.Domain
-	ByUUID     bool
 }
 
 func (guest *Guest) Connect() error {

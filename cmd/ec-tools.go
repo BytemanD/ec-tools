@@ -29,5 +29,6 @@ func main() {
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "显示Debug信息")
 
 	rootCmd.AddCommand(commands.QGACommand)
+	rootCmd.AddCommand(commands.TestNetQos)
 	rootCmd.Execute()
 }

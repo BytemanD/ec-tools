@@ -31,12 +31,12 @@ var QGACommand = &cobra.Command{
 			logging.Error("连接domain失败 %s", err)
 			return
 		}
-		outData, errData := domainGuest.Exec(command)
-		if outData != "" {
-			fmt.Println(outData)
+		execResult := domainGuest.Exec(command, true)
+		if execResult.OutData != "" {
+			fmt.Println(execResult.OutData)
 		}
-		if errData != "" {
-			fmt.Println(errData)
+		if execResult.ErrData != "" {
+			fmt.Println(execResult.ErrData)
 		}
 	},
 }
