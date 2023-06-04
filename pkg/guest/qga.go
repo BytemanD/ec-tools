@@ -141,26 +141,41 @@ type IPAddress struct {
 
 func (guest *Guest) GetIpaddrs() []string {
 	execResult := guest.Exec("ip a", true)
-	reg := regexp.MustCompile("inet [0-9.]+")
-	matchedIPAddresses := reg.FindAllString(execResult.OutData, -1)
+	reg := regexp.MustCompile("inet ([0-9.]+)")
+	matchedIPAddresses := reg.FindAllStringSubmatch(execResult.OutData, -1)
 	ipAddresses := []string{}
-	for i := 0; i < len(matchedIPAddresses); i++ {
-		if strings.Contains(matchedIPAddresses[i], "127.0.0.1") {
+	for _, matchedIPAddress := range matchedIPAddresses {
+		if len(matchedIPAddress) < 2 || matchedIPAddress[1] == "127.0.0.1" {
 			continue
 		}
-		ipAddresses = append(ipAddresses, strings.Split(matchedIPAddresses[i], " ")[1])
+		ipAddresses = append(ipAddresses, matchedIPAddress[1])
 	}
 	return ipAddresses
 }
 
-// Return pid
-func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
-	cmd := fmt.Sprintf("iperf3 -s --bind %s --logfile %s", serverIp, logfile)
-	return guest.Exec(cmd, false)
+func (guest *Guest) Cat(args ...string) ExecResult {
+	return guest.Exec(fmt.Sprintf("cat %s", strings.Join(args, " ")), true)
+}
+
+func (guest *Guest) Kill(single int, pids []int) ExecResult {
+	pidString := []string{}
+	for _, pid := range pids {
+		pidString = append(pidString, fmt.Sprintf("%d", pid))
+	}
+	return guest.Exec(
+		fmt.Sprintf("kill -%d %s", single, strings.Join(pidString, " ")),
+		true)
 }
 
 // Return pid
+func (guest *Guest) RunIperf3(args ...string) ExecResult {
+	return guest.Exec(fmt.Sprintf("iperf3 %s", strings.Join(args, " ")), false)
+}
+
+func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
+	return guest.RunIperf3("-s", "--bind", serverIp, "--logfile", serverIp, logfile)
+}
+
 func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string) ExecResult {
-	cmd := fmt.Sprintf("iperf3 -c %s --bind %s --logfile %s", serverIp, clientIp, logfile)
-	return guest.Exec(cmd, false)
+	return guest.RunIperf3("-c", serverIp, "--bind", clientIp, "--logfile", logfile)
 }
