@@ -62,6 +62,7 @@ type ExecResult struct {
 	Pid     int
 	OutData string
 	ErrData string
+	Failed bool
 }
 
 func (guest *Guest) Exec(command string, wait bool) ExecResult {
@@ -72,7 +73,7 @@ func (guest *Guest) Exec(command string, wait bool) ExecResult {
 	jsonData, _ := json.Marshal(qemuAgentCommand)
 	result, err := guest.runQemuAgentCommand(jsonData)
 	if err != nil {
-		return ExecResult{}
+		return ExecResult{ Failed: true, ErrData: fmt.Sprintf("%s", err)}
 	}
 	var qgaExecResult QgaExecResult
 	json.Unmarshal([]byte(result), &qgaExecResult)
@@ -127,17 +128,6 @@ func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
 	return string(outDecode), string(errDecode)
 }
 
-type AddrInfo struct {
-	Famaliy   string `json:"family"`
-	Local     string `json:"local"`
-	Label     string `json:"label"`
-	Broadcast string `json:"broadcast"`
-}
-
-type IPAddress struct {
-	IFIndex  int        `json:"ifindex"`
-	AddrInfo []AddrInfo `json:"addr_info"`
-}
 
 func (guest *Guest) GetIpaddrs() []string {
 	execResult := guest.Exec("ip a", true)
@@ -177,5 +167,5 @@ func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
 }
 
 func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string) ExecResult {
-	return guest.RunIperf3("-c", serverIp, "--bind", clientIp, "--logfile", logfile)
+	return guest.RunIperf3("-c", serverIp, "--bind", clientIp, "--format", "KBytes", "--logfile", logfile)
 }

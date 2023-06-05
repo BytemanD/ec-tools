@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/fjboy/magic-pocket/pkg/global/logging"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 type GuestConnection struct {
@@ -73,7 +75,7 @@ func TestNetQos(client string, server string) {
 
 	logging.Info("获取服务端虚拟机IP地址")
 	serverAddresses := serverGuest.GetIpaddrs()
-	logging.Info("获取服务端虚拟机IP地址 %s", serverAddresses)
+	logging.Info("服务端虚拟机IP地址: %s", serverAddresses)
 
 	fomatTime := time.Now().Format(time.RFC3339)
 	serverPids := []int{}
@@ -81,7 +83,13 @@ func TestNetQos(client string, server string) {
 		logfile := fmt.Sprintf("/tmp/iperf3_s_%s_%s", fomatTime, serverAddresses)
 		logging.Info("启动服务端: %s", serverAddress)
 		execResult := serverGuest.RunIperfServer(serverAddress, logfile)
+		if execResult.Failed {
+			return
+		}
 		serverPids = append(serverPids, execResult.Pid)
+	}
+	if len(serverPids) > 0 {
+		defer serverGuest.Kill(9, serverPids)
 	}
 
 	jobs := []Job{}
@@ -97,15 +105,23 @@ func TestNetQos(client string, server string) {
 			Logfile:  logfile,
 		})
 	}
-	defer serverGuest.Kill(9, serverPids)
 
 	logging.Info("等待测试结果")
+	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 	tableWriter := table.NewWriter()
 	tableWriter.SetOutputMirror(os.Stdout)
-	tableWriter.AppendHeader(table.Row{"client -> server", "Sender", "Receiver"})
+	tableWriter.SetAutoIndex(true)
+	tableWriter.Style().Format.Header = text.FormatDefault
 
-	senderReg := regexp.MustCompile(" +([0-9.]+ +[a-zA-Z]+/sec) .* +sender")
-	receiverReg := regexp.MustCompile(" +([0-9.]+ +[a-zA-Z]+/sec) .* +receiver")
+	tableWriter.AppendHeader(table.Row{"client -> server", "Bandwidth (KBytes/sec)", "Bandwidth (KBytes/sec)"}, rowConfigAutoMerge)
+	tableWriter.AppendHeader(table.Row{"", "Sender", "Receiver"})
+
+	senderReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec.* +sender")
+	receiverReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec .* +receiver")
+	var (
+		senderTotal   int
+		receiverTotal int
+	)
 	for _, job := range jobs {
 		// 等待命令执行结束
 		clientGuest.getExecStatusOutput(job.Pid)
@@ -115,16 +131,20 @@ func TestNetQos(client string, server string) {
 		matchedReceiver := receiverReg.FindStringSubmatch(execResult.OutData)
 		if len(matchedSender) >= 2 {
 			job.Sender = matchedSender[1]
+			number, _ := strconv.Atoi(job.Sender)
+			senderTotal += number
 		}
 		if len(matchedReceiver) >= 2 {
 			job.Receiver = matchedReceiver[1]
+			number, _ := strconv.Atoi(job.Receiver)
+			receiverTotal += number
 		}
 		tableWriter.AppendRow(
-			[]interface{}{
+			table.Row{
 				fmt.Sprintf("%s -> %s", job.SourceIp, job.DestIp),
 				job.Sender, job.Receiver,
 			})
 	}
-
+	tableWriter.AppendFooter(table.Row{"Total", senderTotal, receiverTotal})
 	tableWriter.Render()
 }

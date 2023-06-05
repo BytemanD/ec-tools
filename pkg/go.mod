@@ -1,3 +1,3 @@
 module github.com/fjboy/ec-tools/pkg
 
-go 1.15
+go 1.17
