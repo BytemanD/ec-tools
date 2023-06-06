@@ -59,7 +59,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	logging.Info("服务端虚拟机IP地址: %s", serverAddresses)
 
 	if len(clientAddresses) == 0 || len(serverAddresses) == 0 {
-		logging.Error("客户端和服务端虚拟机必须至少有一张启用得网卡")
+		logging.Error("客户端和服务端虚拟机必须至少有一张启用的网卡")
 		return
 	}
 
@@ -95,12 +95,15 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	logging.Info("等待测试结果")
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 	tableWriter := table.NewWriter()
-	tableWriter.SetOutputMirror(os.Stdout)
-	tableWriter.SetAutoIndex(true)
-	tableWriter.Style().Format.Header = text.FormatDefault
 
-	tableWriter.AppendHeader(table.Row{"client -> server", "Bandwidth (KBytes/sec)", "Bandwidth (KBytes/sec)"}, rowConfigAutoMerge)
-	tableWriter.AppendHeader(table.Row{"", "Sender", "Receiver"})
+	tableWriter.AppendHeader(
+		table.Row{"客户端 -> 服务端", "网络带宽 (KBytes/sec)", "网络带宽 (KBytes/sec)"},
+		rowConfigAutoMerge,
+	)
+	tableWriter.AppendHeader(
+		table.Row{"", "发送", "接收"},
+		rowConfigAutoMerge, rowConfigAutoMerge, rowConfigAutoMerge,
+	)
 
 	senderReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec.* +sender")
 	receiverReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec .* +receiver")
@@ -132,5 +135,16 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 			})
 	}
 	tableWriter.AppendFooter(table.Row{"Total", senderTotal, receiverTotal})
+
+	tableWriter.SetOutputMirror(os.Stdout)
+	tableWriter.SetAutoIndex(true)
+	tableWriter.SetStyle(table.StyleLight)
+	tableWriter.Style().Format.Header = text.FormatDefault
+	tableWriter.Style().Options.SeparateRows = true
+	tableWriter.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignCenter, AlignFooter: text.AlignCenter},
+		{Number: 2, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignRight, AlignFooter: text.AlignRight},
+		{Number: 3, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignRight, AlignFooter: text.AlignRight},
+	})
 	tableWriter.Render()
 }
