@@ -77,11 +77,13 @@ func (authClient *V3AuthClient) getTokenId() string {
 	return authClient.token.tokenId
 }
 
-func (authClient *V3AuthClient) doRequest(method string, url string, body io.Reader) string {
+func (authClient *V3AuthClient) Request(method string, url string, body io.Reader) string {
 	req, _ := http.NewRequest(method, url, nil)
 	req.Header.Add("X-Auth-Token", authClient.getTokenId())
+	logging.Debug("Req: %s %s", method, url)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
+	logging.Debug("Body: %s", content)
 	defer resp.Body.Close()
 
 	return string(content)
@@ -89,10 +91,26 @@ func (authClient *V3AuthClient) doRequest(method string, url string, body io.Rea
 
 func (authClient *V3AuthClient) ServiceList() string {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/services")
-	return authClient.doRequest("GET", url, nil)
+	return authClient.Request("GET", url, nil)
 }
 
 func (authClient *V3AuthClient) UserList() string {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/users")
-	return authClient.doRequest("GET", url, nil)
+	return authClient.Request("GET", url, nil)
+}
+
+func (authClient *V3AuthClient) GetEndpointFromCatalog(serviceType string, endpointInterface string, region string) string {
+	if len(authClient.token.Catalogs) == 0 {
+		authClient.TokenIssue()
+	}
+	endpoints := authClient.token.GetEndpoints(OptionCatalog{
+		Type:      serviceType,
+		Interface: endpointInterface,
+		Region:    region,
+	})
+	if (len(endpoints)) == 0 {
+		return ""
+	} else {
+		return endpoints[0].Url
+	}
 }

@@ -43,10 +43,10 @@ func (token *RespToken) GetCatalogByType(serviceType string) *Catalog {
 	return &Catalog{}
 }
 
-func (token *RespToken) GetEndpointsByType(option OptionCatalog) []Endpoint {
+func (token *Token) GetEndpoints(option OptionCatalog) []Endpoint {
 	endpoints := []Endpoint{}
 
-	for _, catalog := range token.Token.Catalogs {
+	for _, catalog := range token.Catalogs {
 		if (option.Type != "" && catalog.Type != option.Type) ||
 			(option.Name != "" && catalog.Name != option.Name) {
 			continue

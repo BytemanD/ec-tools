@@ -1,12 +1,28 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/fjboy/ec-tools/pkg/guest"
 	"github.com/fjboy/ec-tools/pkg/openstack"
 	"github.com/fjboy/magic-pocket/pkg/global/logging"
 )
+
+func getGuestConnection(guestAddr string) guest.GuestConnection {
+	addrList := strings.Split(guestAddr, ":")
+	if len(addrList) == 2 {
+		return guest.GuestConnection{
+			Connection: addrList[0],
+			Domain:     addrList[1],
+		}
+	} else {
+		return guest.GuestConnection{
+			Domain: addrList[0],
+		}
+	}
+}
 
 var (
 	client   string
@@ -23,7 +39,9 @@ var TestNetQos = &cobra.Command{
 			return
 		}
 		if directly {
-			guest.TestNetQos(client, server)
+			clientConn := getGuestConnection(client)
+			serverConn := getGuestConnection(server)
+			guest.TestNetQos(clientConn, serverConn)
 		} else {
 			openstack.TestNetQos(client, server)
 		}
@@ -33,5 +51,5 @@ var TestNetQos = &cobra.Command{
 func init() {
 	TestNetQos.Flags().StringVarP(&client, "client", "c", "", "客户端虚拟机UUID")
 	TestNetQos.Flags().StringVarP(&server, "server", "s", "", "服务端虚拟机UUID")
-	TestNetQos.Flags().BoolVar(&directly, "directly", false, "直接通过 QGA 开始测试")
+	TestNetQos.Flags().BoolVar(&directly, "directly", false, "直接通过 QGA 开始测试(不调用计算服务API)")
 }

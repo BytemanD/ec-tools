@@ -41,5 +41,8 @@ func GetV3ClientFromEnv() (V3AuthClient, error) {
 	if client.AuthUrl == "" {
 		return client, fmt.Errorf("OS_AUTH_URL not found")
 	}
+	if client.AuthUrl == "" {
+		return client, fmt.Errorf("OS_REGION_NAME not found")
+	}
 	return client, nil
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/fjboy/magic-pocket/pkg/global/logging"
@@ -28,29 +27,12 @@ type Job struct {
 	Receiver string
 }
 
-func getGuestConnection(guestAddr string) GuestConnection {
-	addrList := strings.Split(guestAddr, ":")
-	if len(addrList) == 2 {
-		return GuestConnection{
-			Connection: addrList[0],
-			Domain:     addrList[1],
-		}
-	} else {
-		return GuestConnection{
-			Domain: addrList[0],
-		}
-	}
-}
-
 // 使用 iperf3 工具测试网络限速
 //
 // 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
-func TestNetQos(client string, server string) {
-	clientConn := getGuestConnection(client)
-	serverConn := getGuestConnection(server)
-
+func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	clientGuest := Guest{
 		Connection: clientConn.Connection,
 		Domain:     clientConn.Domain,
@@ -69,13 +51,17 @@ func TestNetQos(client string, server string) {
 		logging.Error("连接服务端虚拟机失败, %s", err)
 		return
 	}
-	logging.Info("获取客户端虚拟机IP地址")
+	logging.Info("获取客户端和服务端虚拟机IP地址")
 	clientAddresses := clientGuest.GetIpaddrs()
-	logging.Info("客户端虚拟机IP地址: %s", clientAddresses)
-
-	logging.Info("获取服务端虚拟机IP地址")
 	serverAddresses := serverGuest.GetIpaddrs()
+
+	logging.Info("客户端虚拟机IP地址: %s", clientAddresses)
 	logging.Info("服务端虚拟机IP地址: %s", serverAddresses)
+
+	if len(clientAddresses) == 0 || len(serverAddresses) == 0 {
+		logging.Error("客户端和服务端虚拟机必须至少有一张启用得网卡")
+		return
+	}
 
 	fomatTime := time.Now().Format(time.RFC3339)
 	serverPids := []int{}
