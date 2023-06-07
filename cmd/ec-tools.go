@@ -40,5 +40,6 @@ func main() {
 
 	rootCmd.AddCommand(commands.QGACommand)
 	rootCmd.AddCommand(commands.TestNetQos)
+	rootCmd.AddCommand(commands.DelErrorServers)
 	rootCmd.Execute()
 }

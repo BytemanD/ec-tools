@@ -1,6 +1,7 @@
 package openstack
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -13,22 +14,42 @@ import (
 	"github.com/fjboy/ec-tools/pkg/openstack/identity"
 )
 
-func TestNetQos(clientId string, serverId string) {
+func getAuthedClient() (compute.ComputeClientV2, error) {
 	authClient, err := identity.GetV3ClientFromEnv()
 	if err != nil {
 		logging.Error("获取认证客户端失败, %s", err)
-		return
+		return compute.ComputeClientV2{}, fmt.Errorf("获取计算客户端失败")
 	}
 	computeClient, err := compute.GetComputeClientV2(authClient)
 	if err != nil {
 		logging.Error("获取计算客户端失败, %s", err)
-		return
+		return compute.ComputeClientV2{}, fmt.Errorf("获取计算客户端失败")
 	}
 	computeClient.UpdateVersion()
+	return computeClient, nil
+}
+
+func TestNetQos(clientId string, serverId string) {
+	computeClient, err := getAuthedClient()
+	if err != nil {
+		return
+	}
 
 	logging.Info("查询客户端和服务端虚拟机信息")
 	clientVm := computeClient.ServerShow(clientId)
 	serverVm := computeClient.ServerShow(serverId)
+	if clientVm.Id == "" {
+		logging.Error("虚拟机 %s 不存在", clientId)
+		return
+	}
+	if serverVm.Id == "" {
+		logging.Error("虚拟机 %s 不存在", serverId)
+		return
+	}
+	if strings.ToUpper(serverVm.Status) != "ACTIVE" {
+		logging.Error("期望虚拟机 %s 状态是 ACTIVE, 实际是 %s", serverVm.Id, serverVm.Status)
+		return
+	}
 
 	if strings.ToUpper(clientVm.Status) != "ACTIVE" {
 		logging.Error("期望虚拟机 %s 状态是 ACTIVE, 实际是 %s", clientVm.Id, clientVm.Status)
@@ -47,11 +68,11 @@ func TestNetQos(clientId string, serverId string) {
 
 	tableWriter := table.NewWriter()
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
-	tableWriter.AppendHeader(table.Row{"虚拟机", "带宽(KBytes/sec)", "带宽(KBytes/sec)", "网络收发包", "网络收发包"}, rowConfigAutoMerge)
+	tableWriter.AppendHeader(table.Row{"Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)", "PPS", "PPS"}, rowConfigAutoMerge)
 	tableWriter.AppendHeader(table.Row{"", "入", "出", "入", "出"}, rowConfigAutoMerge)
 	tableWriter.AppendRow(
 		table.Row{
-			clientVm.Id + "(客户端)",
+			clientVm.Id + "(Client)",
 			clientVm.Flavor.ExtraSpecs["quota:vif_inbound_burst"],
 			clientVm.Flavor.ExtraSpecs["quota:vif_outbound_burst"],
 			clientVm.Flavor.ExtraSpecs["quota:vif_inbound_pps_burst"],
@@ -59,7 +80,7 @@ func TestNetQos(clientId string, serverId string) {
 		})
 	tableWriter.AppendRow(
 		table.Row{
-			serverVm.Id + "(服务端)",
+			serverVm.Id + "(Server)",
 			serverVm.Flavor.ExtraSpecs["quota:vif_inbound_burst"],
 			serverVm.Flavor.ExtraSpecs["quota:vif_outbound_burst"],
 			serverVm.Flavor.ExtraSpecs["quota:vif_inbound_pps_burst"],
@@ -78,4 +99,24 @@ func TestNetQos(clientId string, serverId string) {
 	})
 	logging.Info("虚拟机信息:")
 	tableWriter.Render()
+}
+
+func DelErrorServers() {
+	computeClient, err := getAuthedClient()
+	if err != nil {
+		return
+	}
+	query := map[string]string{}
+	query["status"] = "error"
+	logging.Info("查询虚拟机")
+	servers := computeClient.ServerList(query)
+	if len(servers) == 0 {
+		logging.Warning("无状态为ERROR的虚拟机")
+		return
+	}
+	logging.Info("开始删除虚拟机")
+	for _, server := range servers {
+		logging.Info("删除虚拟机 %s(%s)", server.Id, server.Name)
+		computeClient.ServerDelete(server.Id)
+	}
 }

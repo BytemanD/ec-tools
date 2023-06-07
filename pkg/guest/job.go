@@ -97,11 +97,11 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	tableWriter := table.NewWriter()
 
 	tableWriter.AppendHeader(
-		table.Row{"客户端 -> 服务端", "网络带宽 (KBytes/sec)", "网络带宽 (KBytes/sec)"},
+		table.Row{"Client -> Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)"},
 		rowConfigAutoMerge,
 	)
 	tableWriter.AppendHeader(
-		table.Row{"", "发送", "接收"},
+		table.Row{"", "Sender", "Receiver"},
 		rowConfigAutoMerge, rowConfigAutoMerge, rowConfigAutoMerge,
 	)
 
