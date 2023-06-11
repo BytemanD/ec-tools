@@ -1,0 +1,6 @@
+debug: true
+
+ec:
+  flavor: m1.small
+  image: cirros
+  bootWithBdm: true

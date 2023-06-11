@@ -7,7 +7,6 @@ import (
 
 	"github.com/fjboy/ec-tools/pkg/guest"
 	"github.com/fjboy/ec-tools/pkg/openstack"
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
 )
 
 func getGuestConnection(guestAddr string) guest.GuestConnection {
@@ -34,10 +33,6 @@ var TestNetQos = &cobra.Command{
 	Short: "测试网络QOS",
 	Long:  "基于iperf3 工具测试两个虚拟机的网络QOS",
 	Run: func(cmd *cobra.Command, args []string) {
-		if client == "" || server == "" {
-			logging.Error("非法参数, client 和 server 不能为空")
-			return
-		}
 		if directly {
 			clientConn := getGuestConnection(client)
 			serverConn := getGuestConnection(server)
