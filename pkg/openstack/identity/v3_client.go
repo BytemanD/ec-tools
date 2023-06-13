@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/BytemanD/ec-tools/pkg/httpclient"
 )
 
 type V3AuthClient struct {
@@ -37,28 +38,39 @@ const (
 )
 
 // Return: body, headers
-func post(url string, body []byte) ([]byte, http.Header) {
+func post(url string, body []byte) httpclient.Response {
 	logging.Debug("Req: %s %s", url, body)
 	resp, err := http.Post(url, ContentType, bytes.NewBuffer(body))
-	logging.Error("Request failed, %s", err)
+	if err != nil {
+		return httpclient.Response{}
+	}
 	defer resp.Body.Close()
 
 	content, _ := ioutil.ReadAll(resp.Body)
-	logging.Debug("Resp: %s", content)
-	return content, resp.Header
+	xxxx := httpclient.Response{
+		Status:  resp.StatusCode,
+		Body:    content,
+		Headers: resp.Header}
+	logging.Debug("Resp: %s", xxxx.Body)
+	return xxxx
 }
 
-func (authClient *V3AuthClient) TokenIssue() {
-	authBoy := GetAuthReqBody(authClient.Username, authClient.Password, authClient.ProjectName)
-	body, _ := json.Marshal(authBoy)
+func (authClient *V3AuthClient) TokenIssue() error {
+	authBody := GetAuthReqBody(authClient.Username, authClient.Password, authClient.ProjectName)
+	body, _ := json.Marshal(authBody)
 	// TODO: use authClient.Request
-	content, headers := post(fmt.Sprintf("%s%s", authClient.AuthUrl, URL_AUTH_TOKEN), body)
+	resp := post(fmt.Sprintf("%s%s", authClient.AuthUrl, URL_AUTH_TOKEN), body)
+	if err := resp.JudgeStatus(); err != nil {
+		return err
+	}
+	// var content, headers
 
 	var resToken RespToken
-	json.Unmarshal(content, &resToken)
-	resToken.Token.tokenId = headers.Get("X-Subject-Token")
+	json.Unmarshal(resp.Body, &resToken)
+	resToken.Token.tokenId = resp.GetHeader("X-Subject-Token")
 	authClient.token = resToken.Token
 	authClient.expiredAt = time.Now().Add(time.Second * time.Duration(authClient.TokenExpireSecond))
+	return nil
 }
 func (authClient *V3AuthClient) isTokenExpired() bool {
 	if authClient.token.tokenId == "" {

@@ -3,6 +3,7 @@ package httpclient
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
@@ -23,12 +24,12 @@ func (session *Session) Request(method string, url string, body []byte, query ma
 
 	logging.Debug("Req: %s %s with %s", method, url, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
-	// content, _ := ioutil.ReadAll(resp.Body)
+	content, _ := ioutil.ReadAll(resp.Body)
 	// logging.Debug("Body: %s", content)
 	defer resp.Body.Close()
 
 	response := Response{
-		Body:    resp.Body,
+		Body:    content,
 		Status:  resp.StatusCode,
 		Headers: resp.Header}
 	err := response.JudgeStatus()

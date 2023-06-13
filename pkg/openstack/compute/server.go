@@ -2,6 +2,8 @@ package compute
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/BytemanD/ec-tools/common"
 )
@@ -36,6 +38,13 @@ func (computeClient *ComputeClientV2) ServerCreate(options ServerCreate) Server 
 	if options.Image == "" {
 		options.Image = common.CONF.Ec.Image
 	}
+	if options.Name == "" {
+		options.Name = fmt.Sprintf("ecTools-vm-%s", time.Now().Format("2006-01-02-15:04:05"))
+	}
+	if options.Networks == "" {
+		options.Networks = "none"
+	}
+
 	serverCreateBody := ServeCreaterBody{
 		Server: options,
 	}

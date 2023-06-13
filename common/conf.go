@@ -67,7 +67,7 @@ func LoadConf() error {
 func InitConf() string {
 	b, err := yaml.Marshal(CONF)
 	if err != nil {
-		os.Exit(1)
+		logging.Fatal("加载配置失败 %s", err)
 	}
 	return string(b)
 }

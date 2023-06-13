@@ -29,8 +29,10 @@ type ServersBody struct {
 }
 
 type ServerCreate struct {
-	Flavor string `json:"flavor"`
-	Image  string `json:"image"`
+	Flavor   string `json:"flavorRef"`
+	Image    string `json:"imageRef"`
+	Name     string `json:"name"`
+	Networks string `json:"networks"`
 }
 
 type ServeCreaterBody struct {

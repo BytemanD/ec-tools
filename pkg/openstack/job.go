@@ -34,14 +34,12 @@ func getAuthedClient() (compute.ComputeClientV2, error) {
 func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) {
 	tableWriter := table.NewWriter()
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
-	header1 := []string{
+	header1 := table.Row{
 		"Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)", "PPS", "PPS",
 	}
-	header2 := []string{
-		"", "inbound", "outbound", "inbound", "outbound",
-	}
-	tableWriter.AppendHeader(table.Row{header1}, rowConfigAutoMerge)
-	tableWriter.AppendHeader(table.Row{header2}, rowConfigAutoMerge)
+	header2 := table.Row{"", "inbound", "outbound", "inbound", "outbound"}
+	tableWriter.AppendHeader(header1, rowConfigAutoMerge)
+	tableWriter.AppendHeader(header2, rowConfigAutoMerge)
 	tableWriter.AppendRow(
 		table.Row{
 			clientServer.Id + "(Client)",
@@ -69,7 +67,7 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 		{Number: 3, AlignHeader: text.AlignCenter, Align: text.AlignRight},
 		{Number: 4, AlignHeader: text.AlignCenter, Align: text.AlignRight},
 	})
-	logging.Info("虚拟机信息:")
+	logging.Info("虚拟机QoS信息:")
 	tableWriter.Render()
 }
 
@@ -98,13 +96,11 @@ func loadOpenrc() error {
 func initConfig() {
 	err := common.LoadConf()
 	if err != nil {
-		logging.Error("加载配置文件失败, %s", err)
-		os.Exit(1)
+		logging.Fatal("加载配置文件失败, %s", err)
 	}
 	common.LogConf(common.CONF)
 	if err := loadOpenrc(); err != nil {
-		logging.Error("导入环境变量失败, %s", err)
-		os.Exit(1)
+		logging.Fatal("导入环境变量失败, %s", err)
 	}
 }
 
@@ -112,34 +108,37 @@ func TestNetQos(clientId string, serverId string) {
 	initConfig()
 	computeClient, err := getAuthedClient()
 	if err != nil {
-		os.Exit(1)
+		logging.Fatal("获取认证客户端失败, %s", err)
 	}
 	var (
 		clientVm, serverVm compute.Server
 	)
 	if clientId == "" {
+		// TODO
 		logging.Info("创建客户端虚拟机")
 		clientVm = computeClient.ServerCreate(compute.ServerCreate{})
+		if clientVm.Id == "" {
+			logging.Fatal("创建客户端虚拟机失败")
+		}
 	} else {
-		logging.Info("创建服务端虚拟机")
 		clientVm = computeClient.ServerShow(clientId)
+		if clientVm.Id == "" {
+			logging.Fatal("虚拟机 %s 不存在", clientId)
+		}
 	}
 	if serverId == "" {
+		// TODO
+		logging.Info("创建服务端虚拟机")
 		serverVm = computeClient.ServerCreate(compute.ServerCreate{})
+		if clientVm.Id == "" {
+			logging.Fatal("创建服务端虚拟机失败")
+		}
 	} else {
 		serverVm = computeClient.ServerShow(serverId)
-	}
-	if clientVm.Id == "" || serverVm.Id == "" {
-		os.Exit(1)
-	}
-	logging.Info("查询客户端和服务端虚拟机信息")
-	if clientVm.Id == "" {
-		logging.Error("虚拟机 %s 不存在", clientId)
-		return
-	}
-	if serverVm.Id == "" {
-		logging.Error("虚拟机 %s 不存在", serverId)
-		return
+		if serverVm.Id == "" {
+			logging.Fatal("虚拟机 %s 不存在", serverId)
+			return
+		}
 	}
 	if strings.ToUpper(serverVm.Status) != "ACTIVE" {
 		logging.Error("期望虚拟机 %s 状态是 ACTIVE, 实际是 %s", serverVm.Id, serverVm.Status)
@@ -154,6 +153,7 @@ func TestNetQos(clientId string, serverId string) {
 		logging.Error("期望虚拟机 %s 状态是 ACTIVE, 实际是 %s", serverVm.Id, serverVm.Status)
 		return
 	}
+
 	PrintVmQosSetting(clientVm, serverVm)
 
 	clientConn := guest.GuestConnection{Connection: clientVm.Host, Domain: clientVm.Id}

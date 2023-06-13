@@ -91,9 +91,7 @@ func (guest *Guest) Exec(command string, wait bool) ExecResult {
 func (guest *Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
 	logging.Debug("QGA 命令: %s", fmt.Sprintf("%s", jsonData))
 	result, err := guest.domain.QemuAgentCommand(
-		fmt.Sprintf("%s", jsonData),
-		libvirt.DOMAIN_QEMU_AGENT_COMMAND_MIN,
-		0)
+		fmt.Sprintf("%s", jsonData), libvirt.DOMAIN_QEMU_AGENT_COMMAND_MIN, 0)
 	if err != nil {
 		logging.Error("执行失败: %s", err)
 		return "", err

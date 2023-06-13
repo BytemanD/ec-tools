@@ -22,8 +22,7 @@ var InitConf = &cobra.Command{
 			fi, err := os.OpenFile(args[0], os.O_RDWR|os.O_CREATE, 0666)
 			defer fi.Close()
 			if err != nil {
-				logging.Error("打开文件失败, %s", err)
-				os.Exit(1)
+				logging.Fatal("打开文件失败 %s", err)
 			}
 			fi.Write([]byte(yamlData))
 		}

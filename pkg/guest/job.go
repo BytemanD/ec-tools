@@ -59,8 +59,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	logging.Info("服务端虚拟机IP地址: %s", serverAddresses)
 
 	if len(clientAddresses) == 0 || len(serverAddresses) == 0 {
-		logging.Error("客户端和服务端虚拟机必须至少有一张启用的网卡")
-		return
+		logging.Fatal("客户端和服务端虚拟机必须至少有一张启用的网卡")
 	}
 
 	fomatTime := time.Now().Format(time.RFC3339)

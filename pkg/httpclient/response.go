@@ -3,14 +3,12 @@ package httpclient
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 )
 
 type Response struct {
 	Status  int
-	Body    io.Reader
+	Body    []byte
 	Headers http.Header
 }
 
@@ -29,13 +27,8 @@ func (resp *Response) JudgeStatus() error {
 	}
 }
 
-func (resp *Response) BodyBytes() []byte {
-	bytes, _ := ioutil.ReadAll(resp.Body)
-	return bytes
-}
-
 func (resp *Response) BodyString() string {
-	return string(resp.BodyBytes())
+	return string(resp.Body)
 }
 
 func (resp *Response) GetHeader(key string) string {
@@ -43,5 +36,5 @@ func (resp *Response) GetHeader(key string) string {
 }
 
 func (resp *Response) BodyUnmarshal(object interface{}) error {
-	return json.Unmarshal(resp.BodyBytes(), object)
+	return json.Unmarshal(resp.Body, object)
 }
