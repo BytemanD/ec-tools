@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fjboy/ec-tools/pkg/guest"
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/BytemanD/ec-tools/pkg/guest"
 )
 
 var (

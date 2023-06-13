@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,6 +29,7 @@ type Default struct {
 }
 
 type Ec struct {
+	AuthOpenrc  string `yaml:"authOpenrc"`
 	Flavor      string `yaml:"flavor"`
 	Image       string `yaml:"image"`
 	BootWithBdm bool   `yaml:"bootWithBdm"`

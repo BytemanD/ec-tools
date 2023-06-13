@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fjboy/ec-tools/cmd/commands"
-	"github.com/fjboy/magic-pocket/pkg/global/gitutils"
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/gitutils"
+	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/BytemanD/ec-tools/cmd/commands"
 )
 
 var (

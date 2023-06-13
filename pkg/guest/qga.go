@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
 	"libvirt.org/go/libvirt"
 )
 
@@ -62,7 +62,7 @@ type ExecResult struct {
 	Pid     int
 	OutData string
 	ErrData string
-	Failed bool
+	Failed  bool
 }
 
 func (guest *Guest) Exec(command string, wait bool) ExecResult {
@@ -73,7 +73,7 @@ func (guest *Guest) Exec(command string, wait bool) ExecResult {
 	jsonData, _ := json.Marshal(qemuAgentCommand)
 	result, err := guest.runQemuAgentCommand(jsonData)
 	if err != nil {
-		return ExecResult{ Failed: true, ErrData: fmt.Sprintf("%s", err)}
+		return ExecResult{Failed: true, ErrData: fmt.Sprintf("%s", err)}
 	}
 	var qgaExecResult QgaExecResult
 	json.Unmarshal([]byte(result), &qgaExecResult)
@@ -127,7 +127,6 @@ func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
 	errDecode, _ := base64.StdEncoding.DecodeString(qgaExecResult.Return.ErrData)
 	return string(outDecode), string(errDecode)
 }
-
 
 func (guest *Guest) GetIpaddrs() []string {
 	execResult := guest.Exec("ip a", true)

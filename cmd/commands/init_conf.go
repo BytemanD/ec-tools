@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fjboy/ec-tools/common"
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/BytemanD/ec-tools/common"
 )
 
 var InitConf = &cobra.Command{

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fjboy/ec-tools/pkg/openstack/identity"
+	"github.com/BytemanD/ec-tools/pkg/openstack/identity"
 )
 
 func GetComputeClientV2(authClient identity.V3AuthClient) (ComputeClientV2, error) {

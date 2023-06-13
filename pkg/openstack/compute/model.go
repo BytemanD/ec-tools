@@ -27,3 +27,12 @@ type ServerBody struct {
 type ServersBody struct {
 	Servers []Server `json:"servers"`
 }
+
+type ServerCreate struct {
+	Flavor string `json:"flavor"`
+	Image  string `json:"image"`
+}
+
+type ServeCreaterBody struct {
+	Server ServerCreate `json:"server"`
+}

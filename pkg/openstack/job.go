@@ -5,15 +5,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 
-	"github.com/fjboy/ec-tools/pkg/guest"
-	"github.com/fjboy/ec-tools/pkg/openstack/compute"
-	"github.com/fjboy/ec-tools/pkg/openstack/identity"
+	"github.com/BytemanD/ec-tools/pkg/guest"
+	"github.com/BytemanD/ec-tools/pkg/openstack/compute"
+	"github.com/BytemanD/ec-tools/pkg/openstack/identity"
 
-	"github.com/fjboy/ec-tools/common"
+	"github.com/BytemanD/ec-tools/common"
 )
 
 func getAuthedClient() (compute.ComputeClientV2, error) {
@@ -34,8 +34,14 @@ func getAuthedClient() (compute.ComputeClientV2, error) {
 func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) {
 	tableWriter := table.NewWriter()
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
-	tableWriter.AppendHeader(table.Row{"Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)", "PPS", "PPS"}, rowConfigAutoMerge)
-	tableWriter.AppendHeader(table.Row{"", "入", "出", "入", "出"}, rowConfigAutoMerge)
+	header1 := []string{
+		"Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)", "PPS", "PPS",
+	}
+	header2 := []string{
+		"", "inbound", "outbound", "inbound", "outbound",
+	}
+	tableWriter.AppendHeader(table.Row{header1}, rowConfigAutoMerge)
+	tableWriter.AppendHeader(table.Row{header2}, rowConfigAutoMerge)
 	tableWriter.AppendRow(
 		table.Row{
 			clientServer.Id + "(Client)",
@@ -67,27 +73,66 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 	tableWriter.Render()
 }
 
-func TestNetQos(clientId string, serverId string) {
+func loadOpenrc() error {
+	if common.CONF.Ec.AuthOpenrc == "" {
+		return fmt.Errorf("authOpenrc is null")
+	}
+	lines, err := common.ReadLines(common.CONF.Ec.AuthOpenrc)
+	if err != nil {
+		return err
+	}
+	for _, line := range lines {
+		cols := strings.Split(line, " ")
+		if len(cols) != 2 {
+			continue
+		}
+		envValue := strings.Split(cols[1], "=")
+		if len(envValue) != 2 {
+			continue
+		}
+		os.Setenv(envValue[0], envValue[1])
+	}
+	return nil
+}
+
+func initConfig() {
 	err := common.LoadConf()
 	if err != nil {
 		logging.Error("加载配置文件失败, %s", err)
 		os.Exit(1)
 	}
 	common.LogConf(common.CONF)
+	if err := loadOpenrc(); err != nil {
+		logging.Error("导入环境变量失败, %s", err)
+		os.Exit(1)
+	}
+}
+
+func TestNetQos(clientId string, serverId string) {
+	initConfig()
 	computeClient, err := getAuthedClient()
 	if err != nil {
 		os.Exit(1)
 	}
+	var (
+		clientVm, serverVm compute.Server
+	)
 	if clientId == "" {
-		os.Exit(1)
+		logging.Info("创建客户端虚拟机")
+		clientVm = computeClient.ServerCreate(compute.ServerCreate{})
+	} else {
+		logging.Info("创建服务端虚拟机")
+		clientVm = computeClient.ServerShow(clientId)
 	}
 	if serverId == "" {
+		serverVm = computeClient.ServerCreate(compute.ServerCreate{})
+	} else {
+		serverVm = computeClient.ServerShow(serverId)
+	}
+	if clientVm.Id == "" || serverVm.Id == "" {
 		os.Exit(1)
 	}
-
 	logging.Info("查询客户端和服务端虚拟机信息")
-	clientVm := computeClient.ServerShow(clientId)
-	serverVm := computeClient.ServerShow(serverId)
 	if clientVm.Id == "" {
 		logging.Error("虚拟机 %s 不存在", clientId)
 		return
@@ -119,6 +164,7 @@ func TestNetQos(clientId string, serverId string) {
 }
 
 func DelErrorServers() {
+	initConfig()
 	computeClient, err := getAuthedClient()
 	if err != nil {
 		return

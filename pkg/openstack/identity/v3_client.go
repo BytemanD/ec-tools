@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fjboy/magic-pocket/pkg/global/logging"
+	"github.com/BytemanD/easygo/pkg/global/logging"
 )
 
 type V3AuthClient struct {
@@ -38,9 +38,9 @@ const (
 
 // Return: body, headers
 func post(url string, body []byte) ([]byte, http.Header) {
-	logging.Debug("Req: %s", url)
-	logging.Debug("Body: %s", body)
-	resp, _ := http.Post(url, ContentType, bytes.NewBuffer(body))
+	logging.Debug("Req: %s %s", url, body)
+	resp, err := http.Post(url, ContentType, bytes.NewBuffer(body))
+	logging.Error("Request failed, %s", err)
 	defer resp.Body.Close()
 
 	content, _ := ioutil.ReadAll(resp.Body)
@@ -51,6 +51,7 @@ func post(url string, body []byte) ([]byte, http.Header) {
 func (authClient *V3AuthClient) TokenIssue() {
 	authBoy := GetAuthReqBody(authClient.Username, authClient.Password, authClient.ProjectName)
 	body, _ := json.Marshal(authBoy)
+	// TODO: use authClient.Request
 	content, headers := post(fmt.Sprintf("%s%s", authClient.AuthUrl, URL_AUTH_TOKEN), body)
 
 	var resToken RespToken
@@ -77,14 +78,18 @@ func (authClient *V3AuthClient) getTokenId() string {
 	return authClient.token.tokenId
 }
 
-func (authClient *V3AuthClient) Request(method string, url string, body io.Reader, query map[string]string, headers map[string]string) string {
-	req, _ := http.NewRequest(method, url, nil)
+func (authClient *V3AuthClient) Request(method string, url string, body []byte, query map[string]string, headers map[string]string) string {
+	var reqBody io.Reader = nil
+	if body != nil {
+		reqBody = bytes.NewBuffer(body)
+	}
+	req, _ := http.NewRequest(method, url, reqBody)
 	req.Header.Set("X-Auth-Token", authClient.getTokenId())
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
-	logging.Debug("Req: %s %s", method, url)
+	logging.Debug("Req: %s %s with %s", method, url, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
 	logging.Debug("Body: %s", content)

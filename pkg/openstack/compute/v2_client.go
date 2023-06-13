@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/fjboy/ec-tools/pkg/openstack/identity"
+	"github.com/BytemanD/ec-tools/pkg/openstack/identity"
 )
 
 type VersionBody struct {

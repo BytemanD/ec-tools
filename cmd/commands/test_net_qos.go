@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fjboy/ec-tools/pkg/guest"
-	"github.com/fjboy/ec-tools/pkg/openstack"
+	"github.com/BytemanD/ec-tools/pkg/guest"
+	"github.com/BytemanD/ec-tools/pkg/openstack"
 )
 
 func getGuestConnection(guestAddr string) guest.GuestConnection {

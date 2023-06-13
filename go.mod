@@ -1,14 +1,9 @@
-module github.com/fjboy/ec-tools
+module github.com/BytemanD/ec-tools
 
 go 1.17
 
 require (
-	github.com/fjboy/ec-tools/pkg v0.0.0
-	github.com/fjboy/magic-pocket/pkg v0.0.1
 	github.com/spf13/cobra v1.7.0
-)
-
-require (
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.4.6 // indirect
@@ -20,4 +15,9 @@ require (
 	libvirt.org/go/libvirt v1.9002.0 // indirect
 )
 
-replace github.com/fjboy/ec-tools/pkg => ./pkg
+require (
+	github.com/BytemanD/ec-tools/pkg v0.0.0
+	github.com/BytemanD/easygo/pkg v0.0.2
+)
+
+replace github.com/BytemanD/ec-tools/pkg => ./pkg
