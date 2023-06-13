@@ -29,10 +29,11 @@ type Default struct {
 }
 
 type Ec struct {
-	AuthOpenrc  string `yaml:"authOpenrc"`
-	Flavor      string `yaml:"flavor"`
-	Image       string `yaml:"image"`
-	BootWithBdm bool   `yaml:"bootWithBdm"`
+	AuthOpenrc     string `yaml:"authOpenrc"`
+	Flavor         string `yaml:"flavor"`
+	Image          string `yaml:"image"`
+	BootWithBdm    bool   `yaml:"bootWithBdm"`
+	IperfGuestPath string `yaml:"iperfGuestPath"`
 }
 
 func fileExists(path string) bool {

@@ -101,7 +101,7 @@ func (authClient *V3AuthClient) Request(method string, url string, body []byte, 
 		req.Header.Set(key, value)
 	}
 
-	logging.Debug("Req: %s %s with %s", method, url, reqBody)
+	logging.Debug("Req: %s %s with %v", method, url, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
 	logging.Debug("Body: %s", content)

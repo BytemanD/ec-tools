@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/BytemanD/ec-tools/common"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 )
@@ -51,6 +52,23 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		logging.Error("连接服务端虚拟机失败, %s", err)
 		return
 	}
+	if !clientGuest.HasCommand("iperf3") {
+		if common.CONF.Ec.IperfGuestPath == "" {
+			logging.Fatal("客户端 iperf3 工具未安装")
+		} else {
+			logging.Info("客户端安装 iperf3")
+			clientGuest.RpmInstall(common.CONF.Ec.IperfGuestPath)
+		}
+	}
+	if !serverGuest.HasCommand("iperf3") {
+		if common.CONF.Ec.IperfGuestPath == "" {
+			logging.Fatal("服务端 iperf3 工具未安装")
+		} else {
+			logging.Info("服务端安装 iperf3")
+			serverGuest.RpmInstall(common.CONF.Ec.IperfGuestPath)
+		}
+	}
+
 	logging.Info("获取客户端和服务端虚拟机IP地址")
 	clientAddresses := clientGuest.GetIpaddrs()
 	serverAddresses := serverGuest.GetIpaddrs()

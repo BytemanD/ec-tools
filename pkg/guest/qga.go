@@ -81,6 +81,8 @@ func (guest *Guest) Exec(command string, wait bool) ExecResult {
 		return ExecResult{Pid: qgaExecResult.Return.Pid}
 	}
 	outData, errData := guest.getExecStatusOutput(qgaExecResult.Return.Pid)
+	logging.Debug("OutData: %s, ErrData: %s", outData, errData)
+
 	return ExecResult{
 		Pid:     qgaExecResult.Return.Pid,
 		OutData: outData,
@@ -165,4 +167,20 @@ func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
 
 func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string) ExecResult {
 	return guest.RunIperf3("-c", serverIp, "--bind", clientIp, "--format", "KBytes", "--logfile", logfile)
+}
+
+func (guest *Guest) HasCommand(command string) bool {
+	execResult := guest.Exec(fmt.Sprintf("whereis %s", command), true)
+	if execResult.Failed {
+		return false
+	}
+	stringList := strings.Split(execResult.OutData, " ")
+	if len(stringList) < 2 || stringList[1] == "" {
+		return false
+	}
+	return true
+}
+
+func (guest *Guest) RpmInstall(packagePath string) {
+	guest.Exec(fmt.Sprintf("rpm -ivh %s", packagePath), true)
 }
