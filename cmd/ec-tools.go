@@ -8,10 +8,12 @@ import (
 	"github.com/BytemanD/easygo/pkg/global/gitutils"
 	"github.com/BytemanD/easygo/pkg/global/logging"
 	"github.com/BytemanD/ec-tools/cmd/commands"
+	"github.com/BytemanD/ec-tools/common"
 )
 
 var (
 	debug   bool
+	conf    []string
 	Version string
 )
 
@@ -34,9 +36,19 @@ func main() {
 				level = logging.DEBUG
 			}
 			logging.BasicConfig(logging.LogConfig{Level: level})
+			err := common.LoadConf(conf)
+			if err != nil {
+				logging.Fatal("加载配置文件失败, %s", err)
+			}
+			if !debug && common.CONF.Debug {
+				logging.BasicConfig(logging.LogConfig{Level: logging.DEBUG})
+			}
+			common.LogConf()
 		},
 	}
+
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "显示Debug信息")
+	rootCmd.PersistentFlags().StringArrayVar(&conf, "conf", common.CONF_FILES, "配置文件")
 
 	rootCmd.AddCommand(commands.QGACommand)
 	rootCmd.AddCommand(commands.TestNetQos)

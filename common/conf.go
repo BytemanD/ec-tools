@@ -45,8 +45,11 @@ func fileExists(path string) bool {
 
 }
 
-func LoadConf() error {
-	for _, file := range CONF_FILES {
+func LoadConf(confFiles []string) error {
+	if len(confFiles) == 0 {
+		confFiles = CONF_FILES
+	}
+	for _, file := range confFiles {
 		if !fileExists(file) {
 			continue
 		}
@@ -73,17 +76,17 @@ func InitConf() string {
 	return string(b)
 }
 
-func LogConf(ecConf ConfGroup) {
+func LogConf() {
 	logging.Debug("*************** config ***************")
-	groupTypes := reflect.TypeOf(ecConf)
-	groupvalues := reflect.ValueOf(ecConf)
+	groupTypes := reflect.TypeOf(CONF)
+	groupvalues := reflect.ValueOf(CONF)
 	for groupNum := 0; groupNum < groupTypes.NumField(); groupNum++ {
 		if groupvalues.Field(groupNum).Kind() != reflect.Struct {
 			logging.Debug("config: %s = %v", groupTypes.Field(groupNum).Name, groupvalues.Field(groupNum))
 			continue
 		}
-		types := reflect.TypeOf(ecConf.Ec)
-		values := reflect.ValueOf(ecConf.Ec)
+		types := reflect.TypeOf(CONF.Ec)
+		values := reflect.ValueOf(CONF.Ec)
 		for num := 0; num < values.NumField(); num++ {
 			logging.Debug("config: %s.%s = %v",
 				groupTypes.Field(groupNum).Name,

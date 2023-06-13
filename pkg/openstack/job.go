@@ -94,11 +94,6 @@ func loadOpenrc() error {
 }
 
 func initConfig() {
-	err := common.LoadConf()
-	if err != nil {
-		logging.Fatal("加载配置文件失败, %s", err)
-	}
-	common.LogConf(common.CONF)
 	if err := loadOpenrc(); err != nil {
 		logging.Fatal("导入环境变量失败, %s", err)
 	}
