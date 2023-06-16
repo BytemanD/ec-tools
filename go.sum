@@ -2,6 +2,8 @@ github.com/BytemanD/easygo/pkg v0.0.1 h1:q7abMgjM1Djs53zEgp9RzxaW5KZ8M0Tf8fHB34z
 github.com/BytemanD/easygo/pkg v0.0.1/go.mod h1:SO8id5SUjHGftiFzCgsHmh3azbf6dmn00OkWWUcjwNI=
 github.com/BytemanD/easygo/pkg v0.0.2 h1:RNAojSyu/QTC89exrdt8IbumAZpeMtYjAZnpCEpBsvw=
 github.com/BytemanD/easygo/pkg v0.0.2/go.mod h1:aoGuZJ2O0Nbl9PpFow/VZPh6DnVqYA82nBBi/S5mceU=
+github.com/BytemanD/easygo/pkg v0.0.3 h1:56k2/xjCUVDkXE95tIq7NKevOi54RmlXoVG2gqTE8r8=
+github.com/BytemanD/easygo/pkg v0.0.3/go.mod h1:aoGuZJ2O0Nbl9PpFow/VZPh6DnVqYA82nBBi/S5mceU=
 github.com/PuerkitoBio/goquery v1.8.1/go.mod h1:Q8ICL1kNUJ2sXGoAhPGUdYDJvgQgHzJsnnd3H7Ho5jQ=
 github.com/andybalholm/cascadia v1.3.1/go.mod h1:R4bJ1UQfqADjvDa4P6HZHLh/3OxWWEqc0Sk8XGwHqvA=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=

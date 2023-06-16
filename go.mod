@@ -17,7 +17,7 @@ require (
 
 require (
 	github.com/BytemanD/ec-tools/pkg v0.0.0
-	github.com/BytemanD/easygo/pkg v0.0.2
+	github.com/BytemanD/easygo/pkg v0.0.3
 )
 
 replace github.com/BytemanD/ec-tools/pkg => ./pkg
