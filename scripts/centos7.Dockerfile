@@ -1,11 +1,8 @@
-FROM 93s63uis.mirror.aliyuncs.com/library/centos:7.8.2003 as Centos7Base
-
-# COPY source dest
-RUN yum makecache
+FROM 93s63uis.mirror.aliyuncs.com/library/centos:7.8.2003 as EC-Tools-Centos7-Base
 
 # Install golang
 RUN yum install -y wget
-RUN wget https://golang.google.cn/dl/go1.17.8.linux-amd64.tar.gz
+RUN wget -q https://golang.google.cn/dl/go1.17.8.linux-amd64.tar.gz
 RUN tar -xzf go1.17.8.linux-amd64.tar.gz -C /usr/local/
 RUN cp /usr/local/go/bin/* /usr/bin/
 RUN go version
@@ -14,10 +11,19 @@ RUN go version
 RUN yum install -y git
 RUN yum install -y libvirt-devel
 RUN yum install -y gcc
+RUN yum install -y rpm-build rpmdevtools
 
-FROM Centos7Base as Centos7Builder
+
 # Build project
+FROM EC-Tools-Centos7-Base as EC-Tools-Centos7-Builder
+
+# In order not to use caching
+ARG DATE
+
+RUN echo ${DATE}
 RUN go env -w GO111MODULE="on" \
     && go env -w GOPROXY="https://mirrors.aliyun.com/goproxy/,direct" \
     && cd /root/ec-tools \
     && sh scripts/build.sh
+RUN cd /root/ec-tools \
+    && sh scripts/build.sh --rpm

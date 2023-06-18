@@ -1,6 +1,8 @@
 debug: true
 
 ec:
+  authOpenrc: /root/admin-openrc.sh
   flavor: m1.small
   image: cirros
   bootWithBdm: true
+  iperfGuestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
