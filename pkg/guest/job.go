@@ -28,6 +28,24 @@ type Job struct {
 	Receiver string
 }
 
+const MB = 1024
+const GB = MB * 1024
+
+// return bandwith, unit
+func humanBandwidth(bandwidth int) string {
+	if !common.CONF.Iperf.ConvertBandwidthUnits {
+		return fmt.Sprintf("%d KB/sec", bandwidth)
+	}
+	switch {
+	case bandwidth >= GB:
+		return fmt.Sprintf("%d GB/sec", bandwidth/GB)
+	case bandwidth >= MB:
+		return fmt.Sprintf("%d MB/sec", bandwidth/MB)
+	default:
+		return fmt.Sprintf("%d KB/sec", bandwidth)
+	}
+}
+
 // 使用 iperf3 工具测试网络限速
 //
 // 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
@@ -41,6 +59,10 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		ByUUID:     true}
 	serverGuest := Guest{Connection: serverConn.Connection, Domain: serverConn.Domain, ByUUID: true}
 	err := clientGuest.Connect()
+	if clientGuest.Domain == serverConn.Domain {
+		logging.Error("客户端和服务端虚拟机不能相同")
+		return
+	}
 	logging.Info("连接客户端虚拟机: %s", clientGuest.Domain)
 	if err != nil {
 		logging.Error("连接客户端虚拟机失败, %s", err)
@@ -53,19 +75,19 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		return
 	}
 	if !clientGuest.HasCommand("iperf3") {
-		if common.CONF.Ec.IperfGuestPath == "" {
+		if common.CONF.Iperf.GuestPath == "" {
 			logging.Fatal("客户端 iperf3 工具未安装")
 		} else {
 			logging.Info("客户端安装 iperf3")
-			clientGuest.RpmInstall(common.CONF.Ec.IperfGuestPath)
+			clientGuest.RpmInstall(common.CONF.Iperf.GuestPath)
 		}
 	}
 	if !serverGuest.HasCommand("iperf3") {
-		if common.CONF.Ec.IperfGuestPath == "" {
+		if common.CONF.Iperf.GuestPath == "" {
 			logging.Fatal("服务端 iperf3 工具未安装")
 		} else {
 			logging.Info("服务端安装 iperf3")
-			serverGuest.RpmInstall(common.CONF.Ec.IperfGuestPath)
+			serverGuest.RpmInstall(common.CONF.Iperf.GuestPath)
 		}
 	}
 
@@ -83,9 +105,10 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	fomatTime := time.Now().Format(time.RFC3339)
 	serverPids := []int{}
 	for _, serverAddress := range serverAddresses {
-		logfile := fmt.Sprintf("/tmp/iperf3_s_%s_%s", fomatTime, serverAddresses)
+		logfile := fmt.Sprintf("/tmp/iperf3_s_%s_%s", fomatTime, serverAddress)
 		logging.Info("启动服务端: %s", serverAddress)
-		execResult := serverGuest.RunIperfServer(serverAddress, logfile)
+		execResult := serverGuest.RunIperfServer(
+			serverAddress, logfile, common.CONF.Iperf.ServerOptions)
 		if execResult.Failed {
 			return
 		}
@@ -100,7 +123,9 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	for i := 0; i < len(clientAddresses) && i < len(serverAddresses); i++ {
 		logfile := fmt.Sprintf("/tmp/iperf3_c_%s_%s", fomatTime, serverAddresses[i])
 		logging.Info("启动客户端: %s -> %s", clientAddresses[i], serverAddresses[i])
-		execResult := clientGuest.RunIperfClient(clientAddresses[i], serverAddresses[i], logfile)
+		execResult := clientGuest.RunIperfClient(
+			clientAddresses[i], serverAddresses[i], logfile,
+			common.CONF.Iperf.ClientOptions)
 		jobs = append(jobs, Job{
 			SourceIp: clientAddresses[i],
 			DestIp:   serverAddresses[i],
@@ -114,7 +139,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	tableWriter := table.NewWriter()
 
 	tableWriter.AppendHeader(
-		table.Row{"Client -> Server", "Bandwidth(KBytes/sec)", "Bandwidth(KBytes/sec)"},
+		table.Row{"Client -> Server", "Bandwidth", "Bandwidth"},
 		rowConfigAutoMerge,
 	)
 	tableWriter.AppendHeader(
@@ -133,30 +158,40 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		clientGuest.getExecStatusOutput(job.Pid)
 		// 获取 sender 和 receiver
 		execResult := clientGuest.Cat(job.Logfile)
-		matchedSender := senderReg.FindStringSubmatch(execResult.OutData)
-		matchedReceiver := receiverReg.FindStringSubmatch(execResult.OutData)
-		if len(matchedSender) >= 2 {
-			job.Sender = matchedSender[1]
-			number, _ := strconv.Atoi(job.Sender)
-			senderTotal += number
+
+		matchedSenders := senderReg.FindAllStringSubmatch(execResult.OutData, -1)
+		matchedReceivers := receiverReg.FindAllStringSubmatch(execResult.OutData, -1)
+
+		for _, matchedSender := range matchedSenders[len(matchedSenders)-1:] {
+			if len(matchedSender) >= 2 {
+				job.Sender = matchedSender[1]
+				number, _ := strconv.Atoi(job.Sender)
+				senderTotal += number
+			}
 		}
-		if len(matchedReceiver) >= 2 {
-			job.Receiver = matchedReceiver[1]
-			number, _ := strconv.Atoi(job.Receiver)
-			receiverTotal += number
+		for _, matchedReceiver := range matchedReceivers[len(matchedReceivers)-1:] {
+			if len(matchedReceiver) >= 2 {
+				job.Receiver = matchedReceiver[1]
+				number, _ := strconv.Atoi(job.Receiver)
+				receiverTotal += number
+			}
 		}
 		tableWriter.AppendRow(
 			table.Row{
 				fmt.Sprintf("%s -> %s", job.SourceIp, job.DestIp),
-				job.Sender, job.Receiver,
+				job.Sender + " KB/sec", job.Receiver + " KB/sec",
 			})
 	}
-	tableWriter.AppendFooter(table.Row{"Total", senderTotal, receiverTotal})
+
+	tableWriter.AppendFooter(table.Row{
+		"Total", humanBandwidth(senderTotal), humanBandwidth(receiverTotal),
+	})
 
 	tableWriter.SetOutputMirror(os.Stdout)
 	tableWriter.SetAutoIndex(true)
 	tableWriter.SetStyle(table.StyleLight)
 	tableWriter.Style().Format.Header = text.FormatDefault
+
 	tableWriter.Style().Options.SeparateRows = true
 	tableWriter.SetColumnConfigs([]table.ColumnConfig{
 		{Number: 1, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignCenter, AlignFooter: text.AlignCenter},

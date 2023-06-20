@@ -1,8 +1,14 @@
-debug: true
+debug: false
 
 ec:
   authOpenrc: /root/admin-openrc.sh
   flavor: m1.small
   image: cirros
   bootWithBdm: true
-  iperfGuestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
+
+iperf:
+  guestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
+  serverOptions:
+  clientOptions:
+  # 输出QOS结果时，自动转化带宽单位
+  convertBandwidthUnits: true

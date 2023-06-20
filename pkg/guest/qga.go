@@ -161,12 +161,17 @@ func (guest *Guest) RunIperf3(args ...string) ExecResult {
 	return guest.Exec(fmt.Sprintf("iperf3 %s", strings.Join(args, " ")), false)
 }
 
-func (guest *Guest) RunIperfServer(serverIp string, logfile string) ExecResult {
-	return guest.RunIperf3("-s", "--bind", serverIp, "--logfile", serverIp, logfile)
+func (guest *Guest) RunIperfServer(serverIp string, logfile string, options string) ExecResult {
+	return guest.RunIperf3(
+		"-s", "--bind", serverIp, "--logfile", serverIp, logfile, options,
+	)
 }
 
-func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string) ExecResult {
-	return guest.RunIperf3("-c", serverIp, "--bind", clientIp, "--format", "KBytes", "--logfile", logfile)
+func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
+
+	return guest.RunIperf3(
+		"-c", serverIp, "--bind", clientIp, "--format", "KBytes", "--logfile", logfile, options,
+	)
 }
 
 func (guest *Guest) HasCommand(command string) bool {

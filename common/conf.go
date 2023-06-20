@@ -21,19 +21,27 @@ var CONF_FILES = []string{
 }
 
 type ConfGroup struct {
-	Debug bool `yaml:"debug"`
-	Ec    Ec   `yaml:"ec"`
+	Debug bool  `yaml:"debug"`
+	Ec    Ec    `yaml:"ec"`
+	Iperf Iperf `yaml:"iperf"`
 }
 
 type Default struct {
 }
 
 type Ec struct {
-	AuthOpenrc     string `yaml:"authOpenrc"`
-	Flavor         string `yaml:"flavor"`
-	Image          string `yaml:"image"`
-	BootWithBdm    bool   `yaml:"bootWithBdm"`
-	IperfGuestPath string `yaml:"iperfGuestPath"`
+	AuthOpenrc  string `yaml:"authOpenrc"`
+	Flavor      string `yaml:"flavor"`
+	Image       string `yaml:"image"`
+	BootWithBdm bool   `yaml:"bootWithBdm"`
+}
+
+type Iperf struct {
+	GuestPath     string `yaml:"guestPath"`
+	ServerOptions string `yaml:"serverOptions"`
+	ClientOptions string `yaml:"clientOptions"`
+	// 输出QOS结果时，自动转化带宽单位
+	ConvertBandwidthUnits bool `yaml:"convertBandwidthUnits"`
 }
 
 func fileExists(path string) bool {
