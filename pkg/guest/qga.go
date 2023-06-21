@@ -170,7 +170,7 @@ func (guest *Guest) RunIperfServer(serverIp string, logfile string, options stri
 func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
 
 	return guest.RunIperf3(
-		"-c", serverIp, "--bind", clientIp, "--format", "KBytes", "--logfile", logfile, options,
+		"-c", serverIp, "--bind", clientIp, "--format", "k", "--logfile", logfile, options,
 	)
 }
 

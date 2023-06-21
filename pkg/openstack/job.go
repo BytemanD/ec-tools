@@ -3,6 +3,7 @@ package openstack
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
@@ -31,7 +32,7 @@ func getAuthedClient() (compute.ComputeClientV2, error) {
 	return computeClient, nil
 }
 
-func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) {
+func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) (float32, float32) {
 	tableWriter := table.NewWriter()
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 	header1 := table.Row{
@@ -69,6 +70,10 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 	})
 	logging.Info("虚拟机QoS信息:")
 	tableWriter.Render()
+
+	inboundKB, _ := strconv.Atoi(clientServer.Flavor.ExtraSpecs["quota:vif_inbound_burst"])
+	outboundKB, _ := strconv.Atoi(clientServer.Flavor.ExtraSpecs["quota:vif_outbound_burst"])
+	return parseFlavorBandwidthToKb(float32(inboundKB)), parseFlavorBandwidthToKb(float32(outboundKB))
 }
 
 func loadOpenrc() error {
@@ -149,13 +154,20 @@ func TestNetQos(clientId string, serverId string) {
 		return
 	}
 
-	PrintVmQosSetting(clientVm, serverVm)
+	inboundKb, outboundKb := PrintVmQosSetting(clientVm, serverVm)
 
 	clientConn := guest.GuestConnection{Connection: clientVm.Host, Domain: clientVm.Id}
 	serverConn := guest.GuestConnection{Connection: serverVm.Host, Domain: serverVm.Id}
 
 	logging.Info("开始通过 QGA 测试")
-	guest.TestNetQos(clientConn, serverConn)
+	senderTotal, receiverTotal := guest.TestNetQos(clientConn, serverConn)
+	logging.Info("出向带宽误差: %v %%", (float32(senderTotal)-inboundKb)*100.0/inboundKb)
+	logging.Info("入向带宽误差: %v %%", (float32(receiverTotal)-outboundKb)*100/outboundKb)
+}
+
+func parseFlavorBandwidthToKb(kB float32) float32 {
+	return kB * 8 / 1024 / 1024 * 1000 * 1000
+
 }
 
 func DelErrorServers() {

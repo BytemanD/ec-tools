@@ -51,7 +51,7 @@ func humanBandwidth(bandwidth int) string {
 // 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
-func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
+func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (int, int) {
 	clientGuest := Guest{
 		Connection: clientConn.Connection,
 		Domain:     clientConn.Domain,
@@ -61,18 +61,18 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	err := clientGuest.Connect()
 	if clientGuest.Domain == serverConn.Domain {
 		logging.Error("客户端和服务端虚拟机不能相同")
-		return
+		return 0, 0
 	}
 	logging.Info("连接客户端虚拟机: %s", clientGuest.Domain)
 	if err != nil {
 		logging.Error("连接客户端虚拟机失败, %s", err)
-		return
+		return 0, 0
 	}
 	logging.Info("连接服务端虚拟机: %s", serverGuest.Domain)
 	err = serverGuest.Connect()
 	if err != nil {
 		logging.Error("连接服务端虚拟机失败, %s", err)
-		return
+		return 0, 0
 	}
 	if !clientGuest.HasCommand("iperf3") {
 		if common.CONF.Iperf.GuestPath == "" {
@@ -110,7 +110,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		execResult := serverGuest.RunIperfServer(
 			serverAddress, logfile, common.CONF.Iperf.ServerOptions)
 		if execResult.Failed {
-			return
+			return 0, 0
 		}
 		serverPids = append(serverPids, execResult.Pid)
 	}
@@ -147,8 +147,8 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		rowConfigAutoMerge, rowConfigAutoMerge, rowConfigAutoMerge,
 	)
 
-	senderReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec.* +sender")
-	receiverReg := regexp.MustCompile(" +([0-9.]+) KBytes/sec .* +receiver")
+	senderReg := regexp.MustCompile(" +([0-9.]+) Kbits/sec .* +sender")
+	receiverReg := regexp.MustCompile(" +([0-9.]+) Kbits/sec .* +receiver")
 	var (
 		senderTotal   int
 		receiverTotal int
@@ -191,6 +191,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 	tableWriter.SetAutoIndex(true)
 	tableWriter.SetStyle(table.StyleLight)
 	tableWriter.Style().Format.Header = text.FormatDefault
+	tableWriter.Style().Format.Footer = text.FormatDefault
 
 	tableWriter.Style().Options.SeparateRows = true
 	tableWriter.SetColumnConfigs([]table.ColumnConfig{
@@ -199,4 +200,5 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) {
 		{Number: 3, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignRight, AlignFooter: text.AlignRight},
 	})
 	tableWriter.Render()
+	return senderTotal, receiverTotal
 }
