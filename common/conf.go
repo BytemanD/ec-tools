@@ -21,9 +21,10 @@ var CONF_FILES = []string{
 }
 
 type ConfGroup struct {
-	Debug bool  `yaml:"debug"`
-	Ec    Ec    `yaml:"ec"`
-	Iperf Iperf `yaml:"iperf"`
+	Debug      bool       `yaml:"debug"`
+	Ec         Ec         `yaml:"ec"`
+	Iperf      Iperf      `yaml:"iperf"`
+	TestServer TestServer `yaml:"testServer"`
 }
 
 type Default struct {
@@ -42,6 +43,10 @@ type Iperf struct {
 	ClientOptions string `yaml:"clientOptions"`
 	// 输出QOS结果时，自动转化带宽单位
 	ConvertBandwidthUnits bool `yaml:"convertBandwidthUnits"`
+}
+
+type TestServer struct {
+	Times int `yaml:"times"`
 }
 
 func fileExists(path string) bool {
@@ -75,7 +80,11 @@ func LoadConf(confFiles []string) error {
 	}
 	return nil
 }
-
+func (cfg *ConfGroup) ExitIfAuthOpenrcEmpty() {
+	if cfg.Ec.AuthOpenrc == "" {
+		logging.Fatal("authOpenrc 未配置")
+	}
+}
 func InitConf() string {
 	b, err := yaml.Marshal(CONF)
 	if err != nil {

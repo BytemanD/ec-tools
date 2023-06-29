@@ -7,8 +7,13 @@ ec:
   bootWithBdm: true
 
 iperf:
+  # iperf rpm 包文件路径
   guestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
   serverOptions:
   clientOptions:
   # 输出QOS结果时，自动转化带宽单位
   convertBandwidthUnits: true
+
+testServer:
+  # 测试次数
+  times: 1

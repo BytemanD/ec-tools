@@ -41,9 +41,9 @@ func (computeClient *ComputeClientV2) getUrl(resource string, id string, query m
 
 // X-OpenStack-Nova-API-Version
 func (computeClient *ComputeClientV2) UpdateVersion() {
-	version := computeClient.AuthClient.Request("GET", computeClient.Endpoint, nil, nil, nil)
+	resp := computeClient.AuthClient.Request("GET", computeClient.Endpoint, nil, nil, nil)
 	versionBody := VersionBody{}
-	json.Unmarshal([]byte(version), &versionBody)
+	json.Unmarshal(resp.Body, &versionBody)
 	computeClient.BaseHeaders = map[string]string{}
 	computeClient.ServerVersion = versionBody.Version
 	computeClient.BaseHeaders["X-OpenStack-Nova-API-Version"] = computeClient.ServerVersion.Version

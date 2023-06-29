@@ -90,7 +90,7 @@ func (authClient *V3AuthClient) getTokenId() string {
 	return authClient.token.tokenId
 }
 
-func (authClient *V3AuthClient) Request(method string, url string, body []byte, query map[string]string, headers map[string]string) string {
+func (authClient *V3AuthClient) Request(method string, url string, body []byte, query map[string]string, headers map[string]string) httpclient.Response {
 	var reqBody io.Reader = nil
 	if body != nil {
 		reqBody = bytes.NewBuffer(body)
@@ -104,18 +104,21 @@ func (authClient *V3AuthClient) Request(method string, url string, body []byte, 
 	logging.Debug("Req: %s %s with %v", method, url, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
-	logging.Debug("Body: %s", content)
+	logging.Debug("Status: %d, Body: %s", resp.StatusCode, content)
 	defer resp.Body.Close()
 
-	return string(content)
+	return httpclient.Response{
+		Status: resp.StatusCode,
+		Body:   content,
+	}
 }
 
-func (authClient *V3AuthClient) ServiceList() string {
+func (authClient *V3AuthClient) ServiceList() httpclient.Response {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/services")
 	return authClient.Request("GET", url, nil, nil, nil)
 }
 
-func (authClient *V3AuthClient) UserList() string {
+func (authClient *V3AuthClient) UserList() httpclient.Response {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/users")
 	return authClient.Request("GET", url, nil, nil, nil)
 }

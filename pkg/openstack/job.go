@@ -77,9 +77,6 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 }
 
 func loadOpenrc() error {
-	if common.CONF.Ec.AuthOpenrc == "" {
-		return fmt.Errorf("authOpenrc is null")
-	}
 	lines, err := common.ReadLines(common.CONF.Ec.AuthOpenrc)
 	if err != nil {
 		return err
@@ -105,7 +102,7 @@ func initConfig() {
 }
 
 func TestNetQos(clientId string, serverId string) {
-	initConfig()
+	common.CONF.ExitIfAuthOpenrcEmpty()
 	computeClient, err := getAuthedClient()
 	if err != nil {
 		logging.Fatal("获取认证客户端失败, %s", err)
@@ -116,12 +113,12 @@ func TestNetQos(clientId string, serverId string) {
 	if clientId == "" {
 		// TODO
 		logging.Info("创建客户端虚拟机")
-		clientVm = computeClient.ServerCreate(compute.ServerCreate{})
+		clientVm = computeClient.ServerCreate(compute.ServerOpt{})
 		if clientVm.Id == "" {
 			logging.Fatal("创建客户端虚拟机失败")
 		}
 	} else {
-		clientVm = computeClient.ServerShow(clientId)
+		clientVm, _ = computeClient.ServerShow(clientId)
 		if clientVm.Id == "" {
 			logging.Fatal("虚拟机 %s 不存在", clientId)
 		}
@@ -129,12 +126,12 @@ func TestNetQos(clientId string, serverId string) {
 	if serverId == "" {
 		// TODO
 		logging.Info("创建服务端虚拟机")
-		serverVm = computeClient.ServerCreate(compute.ServerCreate{})
+		serverVm = computeClient.ServerCreate(compute.ServerOpt{})
 		if clientVm.Id == "" {
 			logging.Fatal("创建服务端虚拟机失败")
 		}
 	} else {
-		serverVm = computeClient.ServerShow(serverId)
+		serverVm, _ = computeClient.ServerShow(serverId)
 		if serverVm.Id == "" {
 			logging.Fatal("虚拟机 %s 不存在", serverId)
 			return
@@ -180,13 +177,45 @@ func DelErrorServers() {
 	query["status"] = "error"
 	logging.Info("查询虚拟机")
 	servers := computeClient.ServerList(query)
+	logging.Info("状态为ERROR的虚拟机数量: %d", len(servers))
 	if len(servers) == 0 {
-		logging.Warning("无状态为ERROR的虚拟机")
 		return
 	}
 	logging.Info("开始删除虚拟机")
 	for _, server := range servers {
 		logging.Info("删除虚拟机 %s(%s)", server.Id, server.Name)
 		computeClient.ServerDelete(server.Id)
+	}
+}
+
+func TestServer(times int) {
+	initConfig()
+	computeClient, err := getAuthedClient()
+	if err != nil {
+		return
+	}
+	CONF := common.CONF
+	if CONF.Ec.Flavor == "" {
+		logging.Fatal("flavor can not be null")
+	}
+	if CONF.Ec.Image == "" {
+		logging.Fatal("image can not be null")
+		os.Exit(1)
+	}
+	var testIimes int
+	if times >= 0 {
+		testIimes = times
+	} else {
+		testIimes = CONF.TestServer.Times
+	}
+	if testIimes == 0 {
+		logging.Fatal("test times must >= 1")
+	}
+
+	for i := 1; i <= CONF.TestServer.Times; i++ {
+		logging.Info("create server %d", i)
+		server := computeClient.WaitServerCreate(compute.ServerOpt{})
+		logging.Info("delete server %d", i)
+		computeClient.WaitServerDeleted(server.Id)
 	}
 }

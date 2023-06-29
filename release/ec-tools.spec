@@ -31,4 +31,11 @@ install -m 755 -d %{buildroot}%{_bindir}
 install -m 755 -d %{buildroot}%{_sysconfdir}/%{CONFIG_DIRNAME}
 
 install -p -m 755 -t %{buildroot}%{_bindir} %{SOURCE0}
-install -p -m 744 -t %{buildroot}%{_sysconfdir}/%{CONFIG_DIRNAME} %{SOURCE1}
+install -p -m 755 -t %{buildroot}%{_sysconfdir}/%{CONFIG_DIRNAME} %{SOURCE1}
+
+%post
+
+cd %{_sysconfdir}/ec-tools/
+if [[ ! -f ec-tools.yaml ]]; then
+    cp ec-tools-template.yaml ec-tools.yaml
+fi

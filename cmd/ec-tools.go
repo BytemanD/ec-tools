@@ -54,5 +54,6 @@ func main() {
 	rootCmd.AddCommand(commands.TestNetQos)
 	rootCmd.AddCommand(commands.DelErrorServers)
 	rootCmd.AddCommand(commands.InitConf)
+	rootCmd.AddCommand(commands.TestServer)
 	rootCmd.Execute()
 }
