@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/BytemanD/ec-tools/ec_manager"
 	"github.com/BytemanD/ec-tools/pkg/guest"
-	"github.com/BytemanD/ec-tools/pkg/openstack"
 )
 
 func getGuestConnection(guestAddr string) guest.GuestConnection {
@@ -38,7 +38,9 @@ var TestNetQos = &cobra.Command{
 			serverConn := getGuestConnection(server)
 			guest.TestNetQos(clientConn, serverConn)
 		} else {
-			openstack.TestNetQos(client, server)
+			ecManager := ec_manager.ECManager{}
+			ecManager.Init()
+			ecManager.TestNetQos(client, server)
 		}
 	},
 }

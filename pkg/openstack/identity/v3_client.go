@@ -21,6 +21,7 @@ type V3AuthClient struct {
 	UserDomainName    string
 	ProjectDomainName string
 	TokenExpireSecond int
+	RegionName        string
 	token             Token
 	expiredAt         time.Time
 }
@@ -37,37 +38,32 @@ const (
 	INTERFACE_INTERVAL string = "internal"
 )
 
-// Return: body, headers
-func post(url string, body []byte) httpclient.Response {
-	logging.Debug("Req: %s %s", url, body)
-	resp, err := http.Post(url, ContentType, bytes.NewBuffer(body))
-	if err != nil {
-		return httpclient.Response{}
-	}
-	defer resp.Body.Close()
-
-	content, _ := ioutil.ReadAll(resp.Body)
-	xxxx := httpclient.Response{
-		Status:  resp.StatusCode,
-		Body:    content,
-		Headers: resp.Header}
-	logging.Debug("Resp: %s", xxxx.Body)
-	return xxxx
-}
-
 func (authClient *V3AuthClient) TokenIssue() error {
 	authBody := GetAuthReqBody(authClient.Username, authClient.Password, authClient.ProjectName)
 	body, _ := json.Marshal(authBody)
-	// TODO: use authClient.Request
-	resp := post(fmt.Sprintf("%s%s", authClient.AuthUrl, URL_AUTH_TOKEN), body)
-	if err := resp.JudgeStatus(); err != nil {
+
+	url := fmt.Sprintf("%s%s", authClient.AuthUrl, URL_AUTH_TOKEN)
+	logging.Debug("Req: POST %s Body: %s", url, body)
+	resp, err := http.Post(url, ContentType, bytes.NewBuffer(body))
+	if err != nil {
+		logging.Error("token issue failed, %s", err)
 		return err
 	}
-	// var content, headers
+	defer resp.Body.Close()
+	logging.Debug("Status: %s", resp.Status)
+
+	content, _ := ioutil.ReadAll(resp.Body)
+	response := httpclient.Response{
+		Status: resp.StatusCode, Headers: resp.Header, Body: content,
+	}
+	if err := response.JudgeStatus(); err != nil {
+		logging.Error("token issue failed, %s", err)
+		return err
+	}
 
 	var resToken RespToken
-	json.Unmarshal(resp.Body, &resToken)
-	resToken.Token.tokenId = resp.GetHeader("X-Subject-Token")
+	json.Unmarshal(response.Body, &resToken)
+	resToken.Token.tokenId = response.GetHeader("X-Subject-Token")
 	authClient.token = resToken.Token
 	authClient.expiredAt = time.Now().Add(time.Second * time.Duration(authClient.TokenExpireSecond))
 	return nil
@@ -90,42 +86,45 @@ func (authClient *V3AuthClient) getTokenId() string {
 	return authClient.token.tokenId
 }
 
-func (authClient *V3AuthClient) Request(method string, url string, body []byte, query map[string]string, headers map[string]string) httpclient.Response {
+func (authClient *V3AuthClient) Request(method string, url string, body []byte, query map[string]string, headers map[string]string) (httpclient.Response, error) {
 	var reqBody io.Reader = nil
 	if body != nil {
 		reqBody = bytes.NewBuffer(body)
 	}
 	req, _ := http.NewRequest(method, url, reqBody)
+	tokenId := authClient.getTokenId()
+	if tokenId == "" {
+		return httpclient.Response{}, fmt.Errorf("token id is null")
+	}
 	req.Header.Set("X-Auth-Token", authClient.getTokenId())
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
-	logging.Debug("Req: %s %s with %v", method, url, reqBody)
+	logging.Debug("Req: %s %s with headers: %v, body: %v", method, url, headers, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
 	logging.Debug("Status: %d, Body: %s", resp.StatusCode, content)
 	defer resp.Body.Close()
 
-	return httpclient.Response{
-		Status: resp.StatusCode,
-		Body:   content,
-	}
+	return httpclient.Response{Status: resp.StatusCode, Body: content}, nil
 }
 
-func (authClient *V3AuthClient) ServiceList() httpclient.Response {
+func (authClient *V3AuthClient) ServiceList() (httpclient.Response, error) {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/services")
 	return authClient.Request("GET", url, nil, nil, nil)
 }
 
-func (authClient *V3AuthClient) UserList() httpclient.Response {
+func (authClient *V3AuthClient) UserList() (httpclient.Response, error) {
 	url := fmt.Sprintf("%s%s", authClient.AuthUrl, "/users")
 	return authClient.Request("GET", url, nil, nil, nil)
 }
 
-func (authClient *V3AuthClient) GetEndpointFromCatalog(serviceType string, endpointInterface string, region string) string {
+func (authClient *V3AuthClient) GetEndpointFromCatalog(serviceType string, endpointInterface string, region string) (string, error) {
 	if len(authClient.token.Catalogs) == 0 {
-		authClient.TokenIssue()
+		if err := authClient.TokenIssue(); err != nil {
+			return "", err
+		}
 	}
 	endpoints := authClient.token.GetEndpoints(OptionCatalog{
 		Type:      serviceType,
@@ -133,8 +132,8 @@ func (authClient *V3AuthClient) GetEndpointFromCatalog(serviceType string, endpo
 		Region:    region,
 	})
 	if (len(endpoints)) == 0 {
-		return ""
+		return "", fmt.Errorf("endpoints not found")
 	} else {
-		return endpoints[0].Url
+		return endpoints[0].Url, nil
 	}
 }

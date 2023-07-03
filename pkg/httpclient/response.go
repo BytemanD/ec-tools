@@ -12,6 +12,15 @@ type Response struct {
 	Headers http.Header
 }
 
+type HttpError struct {
+	Code   int
+	Reason string
+}
+
+func (err *HttpError) Error() string {
+	return fmt.Sprintf("%d %s", err.Code, err.Reason)
+}
+
 func (resp *Response) JudgeStatus() error {
 	switch {
 	case resp.Status <= 400:

@@ -31,7 +31,6 @@ func (computeClient *ComputeClientV2) getUrl(resource string, id string, query m
 	for key, value := range query {
 		queryString += fmt.Sprintf("%s=%s", key, value)
 	}
-
 	if queryString != "" {
 		return url + "?" + queryString
 	} else {
@@ -41,10 +40,11 @@ func (computeClient *ComputeClientV2) getUrl(resource string, id string, query m
 
 // X-OpenStack-Nova-API-Version
 func (computeClient *ComputeClientV2) UpdateVersion() {
-	resp := computeClient.AuthClient.Request("GET", computeClient.Endpoint, nil, nil, nil)
+	resp, _ := computeClient.AuthClient.Request("GET", computeClient.Endpoint, nil, nil, nil)
 	versionBody := VersionBody{}
 	json.Unmarshal(resp.Body, &versionBody)
 	computeClient.BaseHeaders = map[string]string{}
 	computeClient.ServerVersion = versionBody.Version
+	computeClient.BaseHeaders["OpenStack-API-Versionn"] = computeClient.ServerVersion.Version
 	computeClient.BaseHeaders["X-OpenStack-Nova-API-Version"] = computeClient.ServerVersion.Version
 }

@@ -10,16 +10,18 @@ import (
 	"github.com/BytemanD/ec-tools/common"
 )
 
-var InitConf = &cobra.Command{
-	Use:   "init-conf [output]",
+var output string
+
+var DumpConf = &cobra.Command{
+	Use:   "dump-conf",
 	Short: "生成配置文件",
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.MaximumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		yamlData := common.InitConf()
-		if len(args) == 0 {
+		yamlData := common.DumpConf()
+		if output == "" {
 			fmt.Println(yamlData)
 		} else {
-			fi, err := os.OpenFile(args[0], os.O_RDWR|os.O_CREATE, 0666)
+			fi, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0666)
 			defer fi.Close()
 			if err != nil {
 				logging.Fatal("打开文件失败 %s", err)
@@ -27,4 +29,8 @@ var InitConf = &cobra.Command{
 			fi.Write([]byte(yamlData))
 		}
 	},
+}
+
+func init() {
+	DumpConf.Flags().StringVarP(&output, "output", "o", "", "保存文件路径")
 }

@@ -1,7 +1,6 @@
 package compute
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/BytemanD/ec-tools/pkg/openstack/identity"
@@ -12,10 +11,11 @@ func GetComputeClientV2(authClient identity.V3AuthClient) (ComputeClientV2, erro
 	if regionName == "" {
 		regionName = "RegionOne"
 	}
-	endpoint := authClient.GetEndpointFromCatalog(
+	endpoint, err := authClient.GetEndpointFromCatalog(
 		identity.TYPE_COMPUTE, identity.INTERFACE_PUBLIC, regionName)
-	if endpoint == "" {
-		return ComputeClientV2{}, fmt.Errorf("public endpoint for %s is not found", identity.TYPE_COMPUTE)
+
+	if err != nil {
+		return ComputeClientV2{}, err
 	}
 	return ComputeClientV2{AuthClient: authClient, Endpoint: endpoint}, nil
 }

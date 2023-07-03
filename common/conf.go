@@ -22,6 +22,7 @@ var CONF_FILES = []string{
 
 type ConfGroup struct {
 	Debug      bool       `yaml:"debug"`
+	Auth       Auth       `yaml:"auth"`
 	Ec         Ec         `yaml:"ec"`
 	Iperf      Iperf      `yaml:"iperf"`
 	TestServer TestServer `yaml:"testServer"`
@@ -31,10 +32,18 @@ type Default struct {
 }
 
 type Ec struct {
-	AuthOpenrc  string `yaml:"authOpenrc"`
-	Flavor      string `yaml:"flavor"`
-	Image       string `yaml:"image"`
-	BootWithBdm bool   `yaml:"bootWithBdm"`
+	Flavor           string `yaml:"flavor"`
+	Image            string `yaml:"image"`
+	BootWithBdm      bool   `yaml:"bootWithBdm"`
+	AvailabilityZone string `yaml:"availabilityZone"`
+}
+
+type Auth struct {
+	Url             string            `yaml:"url"`
+	RegionName      string            `yaml:"regionName"`
+	User            map[string]string `yaml:"user"`
+	Project         map[string]string `yaml:"project"`
+	TokenExpireTime int               `yaml:"tokenExpireTime"`
 }
 
 type Iperf struct {
@@ -76,40 +85,34 @@ func LoadConf(confFiles []string) error {
 		break
 	}
 	if CONF_FILE == "" {
-		return fmt.Errorf("config file not found")
+		return fmt.Errorf("config file not found, find paths: %v", confFiles)
 	}
 	return nil
 }
-func (cfg *ConfGroup) ExitIfAuthOpenrcEmpty() {
-	if cfg.Ec.AuthOpenrc == "" {
-		logging.Fatal("authOpenrc 未配置")
-	}
-}
-func InitConf() string {
+
+func DumpConf() string {
 	b, err := yaml.Marshal(CONF)
 	if err != nil {
-		logging.Fatal("加载配置失败 %s", err)
+		logging.Fatal("dumpl conf failed, %s", err)
 	}
 	return string(b)
 }
 
-func LogConf() {
-	logging.Debug("*************** config ***************")
-	groupTypes := reflect.TypeOf(CONF)
-	groupvalues := reflect.ValueOf(CONF)
+func LogLines() {
+	logging.Debug("******************** config ********************")
+	groupTypes, groupValues := reflect.TypeOf(CONF), reflect.ValueOf(CONF)
 	for groupNum := 0; groupNum < groupTypes.NumField(); groupNum++ {
-		if groupvalues.Field(groupNum).Kind() != reflect.Struct {
-			logging.Debug("config: %s = %v", groupTypes.Field(groupNum).Name, groupvalues.Field(groupNum))
+		optionTypes := groupTypes.Field(groupNum)
+		options := groupValues.Field(groupNum)
+		if options.Kind() != reflect.Struct {
+			logging.Debug("%-34s = %v", optionTypes.Name, options)
 			continue
 		}
-		types := reflect.TypeOf(CONF.Ec)
-		values := reflect.ValueOf(CONF.Ec)
-		for num := 0; num < values.NumField(); num++ {
-			logging.Debug("config: %s.%s = %v",
-				groupTypes.Field(groupNum).Name,
-				types.Field(num).Name,
-				values.Field(num))
+		for num := 0; num < options.NumField(); num++ {
+			logging.Debug("%-34s = %v",
+				optionTypes.Name+"."+optionTypes.Type.Field(num).Name,
+				options.Field(num))
 		}
 	}
-	logging.Debug("**************************************")
+	logging.Debug("************************************************")
 }

@@ -25,24 +25,24 @@ func getTokenExpireSecond() int {
 	}
 }
 
-// 初始化客户端前，先导入环境变量。
-//
-// 使用环境变量 'OS_TOKEN_EXPIRE_SECOND' 控制 Token 超时时间, 默认 3600s。
-func GetV3ClientFromEnv() (V3AuthClient, error) {
+// 获取认证客户端
+func GetV3Client(authUrl string, user map[string]string, project map[string]string, regionName string) (V3AuthClient, error) {
+	if authUrl == "" {
+		return V3AuthClient{}, fmt.Errorf("auth url is empty")
+	}
+
 	client := V3AuthClient{
-		AuthUrl:           os.Getenv("OS_AUTH_URL"),
-		Username:          os.Getenv("OS_USERNAME"),
-		Password:          os.Getenv("OS_PASSWORD"),
-		ProjectName:       os.Getenv("OS_PROJECT_NAME"),
-		UserDomainName:    os.Getenv("OS_USER_DOMAIN_NAME"),
-		ProjectDomainName: os.Getenv("OS_PROJECT_DOMAIN_NAME"),
+		AuthUrl:           authUrl,
+		Username:          user["name"],
+		Password:          user["password"],
+		UserDomainName:    user["domainName"],
+		ProjectName:       project["name"],
+		ProjectDomainName: project["domainName"],
+		RegionName:        regionName,
 		TokenExpireSecond: getTokenExpireSecond(),
 	}
-	if client.AuthUrl == "" {
-		return client, fmt.Errorf("OS_AUTH_URL not found")
-	}
-	if client.AuthUrl == "" {
-		return client, fmt.Errorf("OS_REGION_NAME not found")
+	if client.RegionName == "" {
+		client.RegionName = "RegionOne"
 	}
 	return client, nil
 }

@@ -22,7 +22,7 @@ func (session *Session) Request(method string, url string, body []byte, query ma
 		req.Header.Set(key, value)
 	}
 
-	logging.Debug("Req: %s %s with %v", method, url, reqBody)
+	logging.Debug("Req: %s %s with headers: %v, body: %v", method, url, headers, reqBody)
 	resp, _ := http.DefaultClient.Do(req)
 	content, _ := ioutil.ReadAll(resp.Body)
 	// logging.Debug("Body: %s", content)
