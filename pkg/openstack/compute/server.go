@@ -48,26 +48,54 @@ func (computeClient *ComputeClientV2) ServerDelete(id string) error {
 	}
 	return nil
 }
-
+func (computeClient *ComputeClientV2) getBlockDeviceMappingV2(imageRef string) BlockDeviceMappingV2 {
+	return BlockDeviceMappingV2{
+		BootIndex:          0,
+		UUID:               imageRef,
+		VolumeSize:         10,
+		SourceType:         "image",
+		DestinationType:    "volume",
+		DeleteOnTemination: true,
+	}
+}
 func (computeClient *ComputeClientV2) ServerCreate(options ServerOpt) (Server, error) {
 	if options.Flavor == "" {
 		options.Flavor = common.CONF.Ec.Flavor
 	}
-	if options.Image == "" {
-		options.Image = common.CONF.Ec.Image
+	image := options.Image
+	if image == "" {
+		image = common.CONF.Ec.Image
+	}
+	if common.CONF.Ec.BootWithBdm {
+		options.BlockDeviceMappingV2 = []BlockDeviceMappingV2{
+			computeClient.getBlockDeviceMappingV2(image),
+		}
+	} else {
+		options.Image = image
 	}
 	if options.Name == "" {
 		options.Name = fmt.Sprintf("ecTools-server-%s", time.Now().Format("2006-01-02-15:04:05"))
 	}
 	if options.Networks == nil {
-		options.Networks = "none"
+		if common.CONF.Ec.Network != "" {
+			networks := map[string]string{}
+			networks["uuid"] = common.CONF.Ec.Network
+			options.Networks = []map[string]string{networks}
+		} else {
+			options.Networks = "none"
+		}
 	}
 	if options.AvailabilityZone == "" {
 		options.AvailabilityZone = common.CONF.Ec.AvailabilityZone
 	}
 	body, _ := json.Marshal(ServeCreaterBody{Server: options})
-	resp, _ := computeClient.AuthClient.Post(
-		computeClient.getUrl("servers", ""), body, computeClient.BaseHeaders)
+	var url string
+	if options.BlockDeviceMappingV2 != nil {
+		url = computeClient.getUrl("os-volumes_boot", "")
+	} else {
+		url = computeClient.getUrl("servers", "")
+	}
+	resp, _ := computeClient.AuthClient.Post(url, body, computeClient.BaseHeaders)
 	serverBody := ServerBody{}
 	json.Unmarshal(resp.Body, &serverBody)
 	return serverBody.Server, resp.JudgeStatus()

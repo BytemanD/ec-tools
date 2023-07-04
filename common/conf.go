@@ -36,6 +36,7 @@ type Ec struct {
 	Image            string `yaml:"image"`
 	BootWithBdm      bool   `yaml:"bootWithBdm"`
 	AvailabilityZone string `yaml:"availabilityZone"`
+	Network          string `yaml:"network"`
 }
 
 type Auth struct {

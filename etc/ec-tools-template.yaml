@@ -16,6 +16,7 @@ ec:
   image: cirros
   bootWithBdm: true
   availabilityZone:
+  Network:
 
 iperf:
   # iperf rpm 包文件路径
