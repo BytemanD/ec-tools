@@ -26,7 +26,7 @@ function main(){
     local containerCmd=$(getContainerCmd)
 
     echo "INFO" "使用命令 ${containerCmd}"
-    echo "INFO" "项目地址" $projectPath
+    echo "INFO" "项目路径" $projectPath
 
     cd ${scriptPath}
     ${containerCmd} build -v ${projectPath}:/root/ec-tools \

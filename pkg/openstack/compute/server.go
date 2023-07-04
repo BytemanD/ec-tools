@@ -140,6 +140,7 @@ func (client *ComputeClientV2) WaitServerDeleted(id string) {
 		if server.Id == "" || err != nil {
 			break
 		}
+		logging.Info("servers status is %s", server.Status)
 		time.Sleep(time.Second * 2)
 	}
 }

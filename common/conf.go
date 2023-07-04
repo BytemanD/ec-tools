@@ -58,6 +58,7 @@ type Iperf struct {
 type TestServer struct {
 	Times           int  `yaml:"times"`
 	ContinueIfError bool `yaml:"continueIfError"`
+	Workers         int  `yaml:"workers"`
 }
 
 func fileExists(path string) bool {

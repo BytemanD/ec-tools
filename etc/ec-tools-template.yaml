@@ -1,5 +1,6 @@
 debug: false
 
+# 认证信息
 auth:
   url: http://keystone-server:35357/v3
   regionName: RegionOne
@@ -29,4 +30,6 @@ iperf:
 testServer:
   # 测试次数
   times: 1
+  # 并发数
+  workers: 1
   continueIfError: false
