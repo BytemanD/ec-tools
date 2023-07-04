@@ -13,24 +13,22 @@ import (
 func (cmpCli *ComputeClientV2) ServerList(query map[string]string) []Server {
 	serversBody := ServersBody{}
 
-	resp, _ := cmpCli.AuthClient.Request(
-		"GET", cmpCli.getUrl("servers", "", query),
-		nil, query, cmpCli.BaseHeaders)
+	resp, _ := cmpCli.AuthClient.Get(
+		cmpCli.getUrl("servers", ""), query, cmpCli.BaseHeaders)
 	json.Unmarshal(resp.Body, &serversBody)
 	return serversBody.Servers
 }
 func (cmpCli *ComputeClientV2) ServerListDetails(query map[string]string) []Server {
 	serversBody := ServersBody{}
 
-	resp, _ := cmpCli.AuthClient.Request(
-		"GET", cmpCli.getUrl("servers/details", "", query),
-		nil, query, cmpCli.BaseHeaders)
+	resp, _ := cmpCli.AuthClient.Get(
+		cmpCli.getUrl("servers/details", ""), query, cmpCli.BaseHeaders)
 	json.Unmarshal(resp.Body, &serversBody)
 	return serversBody.Servers
 }
 func (computeClient *ComputeClientV2) ServerShow(id string) (Server, error) {
-	resp, _ := computeClient.AuthClient.Request(
-		"GET", computeClient.getUrl("servers", id, nil), nil, nil, computeClient.BaseHeaders)
+	resp, _ := computeClient.AuthClient.Get(
+		computeClient.getUrl("servers", id), nil, computeClient.BaseHeaders)
 	if err := resp.JudgeStatus(); err != nil {
 		return Server{}, err
 	}
@@ -40,8 +38,8 @@ func (computeClient *ComputeClientV2) ServerShow(id string) (Server, error) {
 }
 
 func (computeClient *ComputeClientV2) ServerDelete(id string) error {
-	resp, err := computeClient.AuthClient.Request(
-		"DELETE", computeClient.getUrl("servers", id, nil), nil, nil, computeClient.BaseHeaders)
+	resp, err := computeClient.AuthClient.Delete(
+		computeClient.getUrl("servers", id), computeClient.BaseHeaders)
 	if err != nil {
 		return err
 	}
@@ -51,7 +49,7 @@ func (computeClient *ComputeClientV2) ServerDelete(id string) error {
 	return nil
 }
 
-func (computeClient *ComputeClientV2) ServerCreate(options ServerOpt) Server {
+func (computeClient *ComputeClientV2) ServerCreate(options ServerOpt) (Server, error) {
 	if options.Flavor == "" {
 		options.Flavor = common.CONF.Ec.Flavor
 	}
@@ -68,15 +66,17 @@ func (computeClient *ComputeClientV2) ServerCreate(options ServerOpt) Server {
 		options.AvailabilityZone = common.CONF.Ec.AvailabilityZone
 	}
 	body, _ := json.Marshal(ServeCreaterBody{Server: options})
-	resp, _ := computeClient.AuthClient.Request(
-		"POST", computeClient.getUrl("servers", "", nil),
-		body, nil, computeClient.BaseHeaders)
+	resp, _ := computeClient.AuthClient.Post(
+		computeClient.getUrl("servers", ""), body, computeClient.BaseHeaders)
 	serverBody := ServerBody{}
 	json.Unmarshal(resp.Body, &serverBody)
-	return serverBody.Server
+	return serverBody.Server, resp.JudgeStatus()
 }
 func (client *ComputeClientV2) WaitServerCreate(options ServerOpt) (Server, error) {
-	server := client.ServerCreate(options)
+	server, err := client.ServerCreate(options)
+	if err != nil {
+		return server, err
+	}
 	if server.Id == "" {
 		return server, fmt.Errorf("create server failed")
 	}
@@ -93,7 +93,7 @@ func (client *ComputeClientV2) WaitServerStatusSecond(serverId string, status st
 		logging.Debug("server stauts is %s", server.Status)
 		switch strings.ToUpper(server.Status) {
 		case "ERROR":
-			return server, fmt.Errorf("server status is error")
+			return server, fmt.Errorf("server status is error, message: %s", server.Fault.Message)
 		case strings.ToUpper(status):
 			return server, nil
 		}

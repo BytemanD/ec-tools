@@ -15,6 +15,7 @@ ec:
   flavor: m1.small
   image: cirros
   bootWithBdm: true
+  availabilityZone:
 
 iperf:
   # iperf rpm 包文件路径
@@ -27,3 +28,4 @@ iperf:
 testServer:
   # 测试次数
   times: 1
+  continueIfError: false

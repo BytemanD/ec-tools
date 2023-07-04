@@ -20,7 +20,7 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 	if clientId == "" {
 		// TODO
 		logging.Info("创建客户端虚拟机")
-		clientVm = manager.computeClient.ServerCreate(compute.ServerOpt{})
+		clientVm, _ = manager.computeClient.ServerCreate(compute.ServerOpt{})
 		if clientVm.Id == "" {
 			logging.Fatal("创建客户端虚拟机失败")
 		}
@@ -33,7 +33,7 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 	if serverId == "" {
 		// TODO
 		logging.Info("创建服务端虚拟机")
-		serverVm = manager.computeClient.ServerCreate(compute.ServerOpt{})
+		serverVm, _ = manager.computeClient.ServerCreate(compute.ServerOpt{})
 		if clientVm.Id == "" {
 			logging.Fatal("创建服务端虚拟机失败")
 		}

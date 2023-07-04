@@ -22,25 +22,17 @@ type ComputeClientV2 struct {
 	BaseHeaders   map[string]string
 }
 
-func (computeClient *ComputeClientV2) getUrl(resource string, id string, query map[string]string) string {
+func (computeClient *ComputeClientV2) getUrl(resource string, id string) string {
 	url := fmt.Sprintf("%s/%s", computeClient.Endpoint, resource)
 	if id != "" {
 		url += "/" + id
 	}
-	var queryString string
-	for key, value := range query {
-		queryString += fmt.Sprintf("%s=%s", key, value)
-	}
-	if queryString != "" {
-		return url + "?" + queryString
-	} else {
-		return url
-	}
+	return url
 }
 
 // X-OpenStack-Nova-API-Version
 func (computeClient *ComputeClientV2) UpdateVersion() {
-	resp, _ := computeClient.AuthClient.Request("GET", computeClient.Endpoint, nil, nil, nil)
+	resp, _ := computeClient.AuthClient.Get(computeClient.Endpoint, nil, nil)
 	versionBody := VersionBody{}
 	json.Unmarshal(resp.Body, &versionBody)
 	computeClient.BaseHeaders = map[string]string{}

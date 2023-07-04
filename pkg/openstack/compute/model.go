@@ -9,6 +9,12 @@ type Flavor struct {
 	ExtraSpecs   map[string]string `json:"extra_specs"`
 }
 
+type Fault struct {
+	Message string `json:"message"`
+	Code    string `json:"code"`
+	Details string `json:"details"`
+}
+
 type Server struct {
 	Id         string `json:"id"`
 	Name       string `json:"name"`
@@ -18,6 +24,7 @@ type Server struct {
 	Host       string `json:"OS-EXT-SRV-ATTR:host"`
 	AZ         string `json:"OS-EXT-AZ:availability_zone"`
 	Flavor     Flavor `json:"flavor"`
+	Fault      Fault  `json:"fault"`
 }
 
 type ServerBody struct {

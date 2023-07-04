@@ -55,7 +55,8 @@ type Iperf struct {
 }
 
 type TestServer struct {
-	Times int `yaml:"times"`
+	Times           int  `yaml:"times"`
+	ContinueIfError bool `yaml:"continueIfError"`
 }
 
 func fileExists(path string) bool {
@@ -104,15 +105,15 @@ func LogLines() {
 	for groupNum := 0; groupNum < groupTypes.NumField(); groupNum++ {
 		optionTypes := groupTypes.Field(groupNum)
 		options := groupValues.Field(groupNum)
-		if options.Kind() != reflect.Struct {
-			logging.Debug("%-34s = %v", optionTypes.Name, options)
+		if options.Kind() == reflect.Struct {
+			for num := 0; num < options.NumField(); num++ {
+				logging.Debug("%-34s = %v",
+					optionTypes.Name+"."+optionTypes.Type.Field(num).Name,
+					options.Field(num))
+			}
 			continue
 		}
-		for num := 0; num < options.NumField(); num++ {
-			logging.Debug("%-34s = %v",
-				optionTypes.Name+"."+optionTypes.Type.Field(num).Name,
-				options.Field(num))
-		}
+		logging.Debug("%-34s = %v", optionTypes.Name, options)
 	}
 	logging.Debug("************************************************")
 }

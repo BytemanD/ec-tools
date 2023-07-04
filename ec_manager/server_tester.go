@@ -30,12 +30,17 @@ func (manager *ECManager) TestServer(times int) {
 	for i := 1; i <= CONF.TestServer.Times; i++ {
 		logging.Info("create server %d", i)
 		server, err := manager.computeClient.WaitServerCreate(compute.ServerOpt{})
-		logging.Info("created server %s", server.Id)
 		if err != nil {
-			logging.Error("create server failed, %s", err)
-			continue
+			logging.Error("[server: %s] create server failed, %s", server.Id, err)
+			if common.CONF.TestServer.ContinueIfError {
+				continue
+			} else {
+				break
+			}
 		}
-		logging.Info("delete server %s", server.Id)
+		logging.Info("[server: %s] created", server.Id)
+		logging.Info("[server: %s] deleting", server.Id)
 		manager.computeClient.WaitServerDeleted(server.Id)
+		logging.Info("[server: %s] deleted", server.Id)
 	}
 }
