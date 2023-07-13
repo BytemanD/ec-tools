@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
-	"github.com/BytemanD/ec-tools/common"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+
+	"github.com/BytemanD/ec-tools/common"
 )
 
 type GuestConnection struct {
@@ -46,6 +47,29 @@ func humanBandwidth(bandwidth int) string {
 	}
 }
 
+func installIperf(guest Guest) error {
+	if common.CONF.Iperf.GuestPath != "" {
+		logging.Info("%s 安装 iperf3, 路径: %s", guest.Domain, common.CONF.Iperf.GuestPath)
+		if err := guest.RpmInstall(common.CONF.Iperf.GuestPath); err != nil {
+			return err
+		}
+	} else if common.CONF.Iperf.LocalPath != "" {
+		logging.Info("%s 拷贝 iperf3, 本地路径: %s", guest.Domain, common.CONF.Iperf.LocalPath)
+		remoteFile, err := guest.CopyFile(common.CONF.Iperf.LocalPath, "/tmp")
+		if err != nil {
+			return err
+		} else {
+
+			if err := guest.RpmInstall(*remoteFile); err != nil {
+				return err
+			}
+		}
+	} else {
+		return fmt.Errorf("iperf3 文件路径未配置")
+	}
+	return nil
+}
+
 // 使用 iperf3 工具测试网络限速
 //
 // 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
@@ -74,20 +98,15 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (int, in
 		logging.Error("连接服务端虚拟机失败, %s", err)
 		return 0, 0
 	}
+
 	if !clientGuest.HasCommand("iperf3") {
-		if common.CONF.Iperf.GuestPath == "" {
-			logging.Fatal("客户端 iperf3 工具未安装")
-		} else {
-			logging.Info("客户端安装 iperf3")
-			clientGuest.RpmInstall(common.CONF.Iperf.GuestPath)
+		if err := installIperf(clientGuest); err != nil {
+			logging.Fatal("安装iperf失败, %s", err)
 		}
 	}
 	if !serverGuest.HasCommand("iperf3") {
-		if common.CONF.Iperf.GuestPath == "" {
-			logging.Fatal("服务端 iperf3 工具未安装")
-		} else {
-			logging.Info("服务端安装 iperf3")
-			serverGuest.RpmInstall(common.CONF.Iperf.GuestPath)
+		if err := installIperf(serverGuest); err != nil {
+			logging.Fatal("安装iperf失败, %s", err)
 		}
 	}
 

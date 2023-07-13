@@ -22,6 +22,8 @@ ec:
 iperf:
   # iperf rpm 包文件路径
   guestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
+  # iperf rpm 包本地路径
+  LocalPath:
   serverOptions:
   clientOptions:
   # 输出QOS结果时，自动转化带宽单位

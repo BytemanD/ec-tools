@@ -49,6 +49,7 @@ type Auth struct {
 
 type Iperf struct {
 	GuestPath     string `yaml:"guestPath"`
+	LocalPath     string `yaml:"localPath"`
 	ServerOptions string `yaml:"serverOptions"`
 	ClientOptions string `yaml:"clientOptions"`
 	// 输出QOS结果时，自动转化带宽单位
@@ -67,7 +68,6 @@ func fileExists(path string) bool {
 		return false
 	}
 	return !fi.IsDir()
-
 }
 
 func LoadConf(confFiles []string) error {

@@ -4,12 +4,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/BytemanD/easygo/pkg/global/logging"
 	"libvirt.org/go/libvirt"
+
+	"github.com/BytemanD/easygo/pkg/global/logging"
 )
 
 type GuestExecArguments struct {
@@ -25,7 +29,7 @@ type QemuAgentCommand struct {
 	Execute   string             `json:"execute"`
 	Arguments GuestExecArguments `json:"arguments"`
 }
-type QACExecStatus struct {
+type QGACExecStatus struct {
 	Execute   string                   `json:"execute"`
 	Arguments GuestExecStatusArguments `json:"arguments"`
 }
@@ -42,6 +46,39 @@ type QgaExecResult struct {
 }
 type QgaExecStatusResult struct {
 	Return QgaExecStatusReturn `json:"return"`
+}
+type QgaGFileOpen struct {
+	Execute   string                 `json:"execute"`
+	Arguments GuestFileOpenArguments `json:"arguments"`
+}
+type GuestFileOpenArguments struct {
+	Path string `json:"path"`
+	Mode string `json:"mode"`
+}
+type QgaFileOpenReturn struct {
+	Return int `json:"return"`
+}
+type QgaGFileWrite struct {
+	Execute   string                  `json:"execute"`
+	Arguments GuestFileWriteArguments `json:"arguments"`
+}
+type GuestFileWriteArguments struct {
+	Handle int    `json:"handle"`
+	Bufb64 string `json:"buf-b64"`
+}
+type QgaWriteOpenReturn struct {
+	Return QgaWriteOpenReturnArguments `json:"return"`
+}
+type QgaWriteOpenReturnArguments struct {
+	Count int  `json:"count"`
+	Eof   bool `json:"eof"`
+}
+type QgaGFileClose struct {
+	Execute   string                  `json:"execute"`
+	Arguments GuestFileCloseArguments `json:"arguments"`
+}
+type GuestFileCloseArguments struct {
+	Handle int `json:"handle"`
 }
 
 func getGuestExecArguments(command string) GuestExecArguments {
@@ -104,7 +141,7 @@ func (guest *Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
 
 // guest-exec-status
 func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
-	qemuAgentCommand := QACExecStatus{
+	qemuAgentCommand := QGACExecStatus{
 		Execute:   "guest-exec-status",
 		Arguments: getGuestExecStatusArguments(pid),
 	}
@@ -186,6 +223,63 @@ func (guest *Guest) HasCommand(command string) bool {
 	return true
 }
 
-func (guest *Guest) RpmInstall(packagePath string) {
-	guest.Exec(fmt.Sprintf("rpm -ivh %s", packagePath), true)
+func (guest *Guest) RpmInstall(packagePath string) error {
+	logging.Info("%s 安装 iperf3, 路径: %v", guest.Domain, packagePath)
+	result := guest.Exec(fmt.Sprintf("rpm -ivh %s", packagePath), true)
+	if result.Failed {
+		return fmt.Errorf("%s install failed, %s", packagePath, result.ErrData)
+	}
+	return nil
+}
+
+func (guest *Guest) FileWrite(filePath string, content string) error {
+	// file open
+	logging.Debug("%s file open", filePath)
+	fileOpenCommand := QgaGFileOpen{
+		Execute:   "guest-file-open",
+		Arguments: GuestFileOpenArguments{Path: filePath, Mode: "w+"},
+	}
+	jsonData, _ := json.Marshal(fileOpenCommand)
+	result, _ := guest.runQemuAgentCommand(jsonData)
+	var qgaFileOpenResult QgaFileOpenReturn
+	json.Unmarshal([]byte(result), &qgaFileOpenResult)
+	logging.Debug("file %s open handle: %d", filePath, qgaFileOpenResult.Return)
+	if qgaFileOpenResult.Return == 0 {
+		return fmt.Errorf("open file failed, return: %s", result)
+	}
+	// file write
+	logging.Debug("%s file write", filePath)
+	fileWriteCommand := QgaGFileWrite{
+		Execute: "guest-file-write",
+		Arguments: GuestFileWriteArguments{
+			Handle: qgaFileOpenResult.Return,
+			Bufb64: base64.StdEncoding.EncodeToString([]byte(content))},
+	}
+	jsonData, _ = json.Marshal(fileWriteCommand)
+	result, _ = guest.runQemuAgentCommand(jsonData)
+	var qgaFIleWriteResult QgaWriteOpenReturn
+	json.Unmarshal([]byte(result), &qgaFIleWriteResult)
+	logging.Debug("file %s write result %v", filePath, qgaFIleWriteResult)
+	// file close
+	logging.Debug("%s file close", filePath)
+	fileCloseCommand := QgaGFileClose{
+		Execute:   "guest-file-close",
+		Arguments: GuestFileCloseArguments{Handle: qgaFileOpenResult.Return},
+	}
+	jsonData, _ = json.Marshal(fileCloseCommand)
+	guest.runQemuAgentCommand(jsonData)
+	return nil
+}
+
+func (guest *Guest) CopyFile(localFile string, remotePath string) (*string, error) {
+	// TODO: 限制文件大小 <= 160k
+	f, err := os.OpenFile(localFile, os.O_RDONLY, 0666)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := ioutil.ReadAll(f)
+	remoteFile := remotePath + "/" + filepath.Base(localFile)
+	logging.Info("复制文件 %s --> %s", localFile, remotePath)
+	return &remoteFile, guest.FileWrite(remoteFile, string(bytes))
 }

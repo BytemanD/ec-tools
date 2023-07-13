@@ -48,5 +48,5 @@ var TestNetQos = &cobra.Command{
 func init() {
 	TestNetQos.Flags().StringVar(&client, "client", "", "客户端虚拟机UUID")
 	TestNetQos.Flags().StringVar(&server, "server", "", "服务端虚拟机UUID")
-	TestNetQos.Flags().BoolVar(&directly, "directly", false, "直接通过 QGA 开始测试(不调用计算服务API)")
+	TestNetQos.Flags().BoolVar(&directly, "direct", false, "直接通过 QGA 开始测试(不调用计算服务API)")
 }
