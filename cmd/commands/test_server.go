@@ -20,5 +20,5 @@ var TestServer = &cobra.Command{
 }
 
 func init() {
-	TestNetQos.Flags().IntVar(&times, "times", 0, "测试次数")
+	TestServer.Flags().IntVar(&times, "times", 0, "测试次数")
 }

@@ -28,21 +28,21 @@ type Job struct {
 	Receiver string
 }
 
-const MB = 1024
-const GB = MB * 1024
+const Mb = 1000
+const Gb = Mb * 1000
 
 // return bandwith, unit
 func humanBandwidth(bandwidth int) string {
 	if !common.CONF.Iperf.ConvertBandwidthUnits {
-		return fmt.Sprintf("%d KB/sec", bandwidth)
+		return fmt.Sprintf("%d Kbits/sec", bandwidth)
 	}
 	switch {
-	case bandwidth >= GB:
-		return fmt.Sprintf("%d GB/sec", bandwidth/GB)
-	case bandwidth >= MB:
-		return fmt.Sprintf("%d MB/sec", bandwidth/MB)
+	case bandwidth >= Gb:
+		return fmt.Sprintf("%d Gbits/sec", bandwidth/Gb)
+	case bandwidth >= Mb:
+		return fmt.Sprintf("%d Mbits/sec", bandwidth/Mb)
 	default:
-		return fmt.Sprintf("%d KB/sec", bandwidth)
+		return fmt.Sprintf("%d Kbits/sec", bandwidth)
 	}
 }
 
