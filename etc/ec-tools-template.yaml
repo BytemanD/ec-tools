@@ -25,7 +25,7 @@ iperf:
   # iperf rpm 包本地路径
   LocalPath:
   serverOptions:
-  clientOptions:
+  clientOptions: -P 4 -t 60
   # 输出QOS结果时，自动转化带宽单位
   convertBandwidthUnits: true
 

@@ -2,14 +2,11 @@ package guest
 
 import (
 	"fmt"
-	"os"
-	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BytemanD/easygo/pkg/global/logging"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
 
 	"github.com/BytemanD/ec-tools/common"
 )
@@ -54,7 +51,7 @@ func installIperf(guest Guest) error {
 
 // 使用 iperf3 工具测试网络限速
 //
-// 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
+// 参数为客户端和服务端虚拟机的连接地址，格式: "连接地址:虚拟机 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
 func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64, float64) {
@@ -135,73 +132,25 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 		})
 	}
 
-	logging.Info("等待测试结果")
-	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
-	tableWriter := table.NewWriter()
-
-	tableWriter.AppendHeader(
-		table.Row{"Client -> Server", "Bandwidth", "Bandwidth"},
-		rowConfigAutoMerge,
-	)
-	tableWriter.AppendHeader(
-		table.Row{"", "Sender", "Receiver"},
-		rowConfigAutoMerge, rowConfigAutoMerge, rowConfigAutoMerge,
-	)
-
-	senderReg := regexp.MustCompile(" +([0-9.]+) ([a-zA-Z]+)/sec .* +sender")
-	receiverReg := regexp.MustCompile(" +([0-9.]+) ([a-zA-Z]+)/sec .* +receiver")
-	var (
-		senderTotal   float64
-		receiverTotal float64
-	)
-	for _, job := range jobs {
-		// 等待命令执行结束
-		clientGuest.getExecStatusOutput(job.Pid)
-		// 获取 sender 和 receiver
-		execResult := clientGuest.Cat(job.Logfile)
-		matchedSenders := senderReg.FindAllStringSubmatch(execResult.OutData, -1)
-		matchedReceivers := receiverReg.FindAllStringSubmatch(execResult.OutData, -1)
-		if len(matchedSenders) == 0 || len(matchedReceivers) == 0 {
-			logging.Error("sender or receiver not found")
-			return 0, 0
+	clientOptions := strings.Split(common.CONF.Iperf.ClientOptions, " ")
+	times := 10
+	for i, option := range strings.Split(common.CONF.Iperf.ClientOptions, " ") {
+		if option == "-t" || option == "--time" {
+			times, _ = strconv.Atoi(clientOptions[i+1])
 		}
-		for _, matchedSender := range matchedSenders[len(matchedSenders)-1:] {
-			if len(matchedSender) >= 3 {
-				number, _ := strconv.ParseFloat(matchedSender[1], 64)
-				job.Sender = Bandwidth{Value: number, Unit: matchedSender[2]}
-				senderTotal += job.Sender.ToKbits()
-			}
-		}
-		for _, matchedReceiver := range matchedReceivers[len(matchedReceivers)-1:] {
-			if len(matchedReceiver) >= 2 {
-				number, _ := strconv.ParseFloat(matchedReceiver[1], 64)
-				job.Receiver = Bandwidth{Value: number, Unit: matchedReceiver[2]}
-				receiverTotal += job.Receiver.ToKbits()
-			}
-		}
-		tableWriter.AppendRow(
-			table.Row{
-				fmt.Sprintf("%s -> %s", job.SourceIp, job.DestIp),
-				job.Sender.String(), job.Receiver.String(),
-			})
 	}
+	logging.Info("等待测试结果(%ds) ...", times)
+	time.Sleep(time.Second * time.Duration(times))
+	for _, job := range jobs {
+		clientGuest.getExecStatusOutput(job.Pid)
+	}
+	logging.Info("测试结束")
 
-	tableWriter.AppendFooter(table.Row{
-		"Total", HumanParseBandwidth(senderTotal), HumanParseBandwidth(receiverTotal),
-	})
-
-	tableWriter.SetOutputMirror(os.Stdout)
-	tableWriter.SetAutoIndex(true)
-	tableWriter.SetStyle(table.StyleLight)
-	tableWriter.Style().Format.Header = text.FormatDefault
-	tableWriter.Style().Format.Footer = text.FormatDefault
-
-	tableWriter.Style().Options.SeparateRows = true
-	tableWriter.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignCenter, AlignFooter: text.AlignCenter},
-		{Number: 2, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignRight, AlignFooter: text.AlignRight},
-		{Number: 3, AutoMerge: true, AlignHeader: text.AlignCenter, Align: text.AlignRight, AlignFooter: text.AlignRight},
-	})
-	tableWriter.Render()
-	return senderTotal, receiverTotal
+	reports := NewIperfReports()
+	for _, job := range jobs {
+		execResult := clientGuest.Cat(job.Logfile)
+		reports.Add(job.SourceIp, job.DestIp, execResult.OutData)
+	}
+	reports.Print()
+	return reports.SendTotal.Value, reports.ReceiveTotal.Value
 }

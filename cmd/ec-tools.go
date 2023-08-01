@@ -52,7 +52,6 @@ func main() {
 
 	rootCmd.AddCommand(commands.QGACommand)
 	rootCmd.AddCommand(commands.TestNetQos)
-	rootCmd.AddCommand(commands.ServerPrune)
 	rootCmd.AddCommand(commands.DumpConf)
 	rootCmd.AddCommand(commands.TestServer)
 	rootCmd.Execute()

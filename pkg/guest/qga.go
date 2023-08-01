@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,7 +102,7 @@ type ExecResult struct {
 	Failed  bool
 }
 
-func (guest *Guest) Exec(command string, wait bool) ExecResult {
+func (guest Guest) Exec(command string, wait bool) ExecResult {
 	qemuAgentCommand := QemuAgentCommand{
 		Execute:   "guest-exec",
 		Arguments: getGuestExecArguments(command),
@@ -127,7 +127,7 @@ func (guest *Guest) Exec(command string, wait bool) ExecResult {
 	}
 }
 
-func (guest *Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
+func (guest Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
 	logging.Debug("QGA 命令: %s", fmt.Sprintf("%s", jsonData))
 	result, err := guest.domain.QemuAgentCommand(
 		fmt.Sprintf("%s", jsonData), libvirt.DOMAIN_QEMU_AGENT_COMMAND_MIN, 0)
@@ -140,7 +140,7 @@ func (guest *Guest) runQemuAgentCommand(jsonData []byte) (string, error) {
 }
 
 // guest-exec-status
-func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
+func (guest Guest) getExecStatusOutput(pid int) (string, string) {
 	qemuAgentCommand := QGACExecStatus{
 		Execute:   "guest-exec-status",
 		Arguments: getGuestExecStatusArguments(pid),
@@ -158,14 +158,14 @@ func (guest *Guest) getExecStatusOutput(pid int) (string, string) {
 			time.Since(startTime).Seconds() >= float64(time.Second)*float64(guest.QGATimeout) {
 			break
 		}
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 1)
 	}
 	outDecode, _ := base64.StdEncoding.DecodeString(qgaExecResult.Return.OutData)
 	errDecode, _ := base64.StdEncoding.DecodeString(qgaExecResult.Return.ErrData)
 	return string(outDecode), string(errDecode)
 }
 
-func (guest *Guest) GetIpaddrs() []string {
+func (guest Guest) GetIpaddrs() []string {
 	execResult := guest.Exec("ip a", true)
 	reg := regexp.MustCompile("inet ([0-9.]+)")
 	matchedIPAddresses := reg.FindAllStringSubmatch(execResult.OutData, -1)
@@ -179,11 +179,11 @@ func (guest *Guest) GetIpaddrs() []string {
 	return ipAddresses
 }
 
-func (guest *Guest) Cat(args ...string) ExecResult {
+func (guest Guest) Cat(args ...string) ExecResult {
 	return guest.Exec(fmt.Sprintf("cat %s", strings.Join(args, " ")), true)
 }
 
-func (guest *Guest) Kill(single int, pids []int) ExecResult {
+func (guest Guest) Kill(single int, pids []int) ExecResult {
 	pidString := []string{}
 	for _, pid := range pids {
 		pidString = append(pidString, fmt.Sprintf("%d", pid))
@@ -194,24 +194,24 @@ func (guest *Guest) Kill(single int, pids []int) ExecResult {
 }
 
 // Return pid
-func (guest *Guest) RunIperf3(args ...string) ExecResult {
+func (guest Guest) RunIperf3(args ...string) ExecResult {
 	return guest.Exec(fmt.Sprintf("iperf3 %s", strings.Join(args, " ")), false)
 }
 
-func (guest *Guest) RunIperfServer(serverIp string, logfile string, options string) ExecResult {
+func (guest Guest) RunIperfServer(serverIp string, logfile string, options string) ExecResult {
 	return guest.RunIperf3(
 		"-s", "--bind", serverIp, "--logfile", logfile, options,
 	)
 }
 
-func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
+func (guest Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
 
 	return guest.RunIperf3(
 		"-c", serverIp, "--bind", clientIp, "--logfile", logfile, options,
 	)
 }
 
-func (guest *Guest) HasCommand(command string) bool {
+func (guest Guest) HasCommand(command string) bool {
 	execResult := guest.Exec(fmt.Sprintf("whereis %s", command), true)
 	if execResult.Failed {
 		return false
@@ -223,7 +223,7 @@ func (guest *Guest) HasCommand(command string) bool {
 	return true
 }
 
-func (guest *Guest) RpmInstall(packagePath string) error {
+func (guest Guest) RpmInstall(packagePath string) error {
 	logging.Info("%s 安装 iperf3, 路径: %v", guest.Domain, packagePath)
 	result := guest.Exec(fmt.Sprintf("rpm -ivh %s", packagePath), true)
 	if result.Failed {
@@ -232,7 +232,7 @@ func (guest *Guest) RpmInstall(packagePath string) error {
 	return nil
 }
 
-func (guest *Guest) FileWrite(filePath string, content string) error {
+func (guest Guest) FileWrite(filePath string, content string) error {
 	// file open
 	logging.Debug("%s file open", filePath)
 	fileOpenCommand := QgaGFileOpen{
@@ -271,14 +271,14 @@ func (guest *Guest) FileWrite(filePath string, content string) error {
 	return nil
 }
 
-func (guest *Guest) CopyFile(localFile string, remotePath string) (*string, error) {
+func (guest Guest) CopyFile(localFile string, remotePath string) (*string, error) {
 	// TODO: 限制文件大小 <= 160k
 	f, err := os.OpenFile(localFile, os.O_RDONLY, 0666)
 	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := ioutil.ReadAll(f)
+	bytes, err := io.ReadAll(f)
 	remoteFile := remotePath + "/" + filepath.Base(localFile)
 	logging.Info("复制文件 %s --> %s", localFile, remotePath)
 	return &remoteFile, guest.FileWrite(remoteFile, string(bytes))
