@@ -60,10 +60,10 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 
 	logging.Info("开始通过 QGA 测试")
 	senderTotal, receiverTotal := guest.TestNetQos(clientConn, serverConn)
-	logging.Info("出向带宽误差: %v %%", (float32(senderTotal)-inboundKb)*100.0/inboundKb)
-	logging.Info("入向带宽误差: %v %%", (float32(receiverTotal)-outboundKb)*100/outboundKb)
+	logging.Info("出向带宽误差: %v %%", (senderTotal-inboundKb)*100.0/inboundKb)
+	logging.Info("入向带宽误差: %v %%", (receiverTotal-outboundKb)*100/outboundKb)
 }
-func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) (float32, float32) {
+func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) (float64, float64) {
 	tableWriter := table.NewWriter()
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 	header1 := table.Row{
@@ -104,8 +104,8 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 
 	inboundKB, _ := strconv.Atoi(clientServer.Flavor.ExtraSpecs["quota:vif_inbound_burst"])
 	outboundKB, _ := strconv.Atoi(clientServer.Flavor.ExtraSpecs["quota:vif_outbound_burst"])
-	return parseFlavorBandwidthToKb(float32(inboundKB)), parseFlavorBandwidthToKb(float32(outboundKB))
+	return parseFlavorBandwidthToKb(float64(inboundKB)), parseFlavorBandwidthToKb(float64(outboundKB))
 }
-func parseFlavorBandwidthToKb(kB float32) float32 {
+func parseFlavorBandwidthToKb(kB float64) float64 {
 	return kB * 8 / 1024 / 1024 * 1000 * 1000
 }

@@ -200,14 +200,14 @@ func (guest *Guest) RunIperf3(args ...string) ExecResult {
 
 func (guest *Guest) RunIperfServer(serverIp string, logfile string, options string) ExecResult {
 	return guest.RunIperf3(
-		"-s", "--bind", serverIp, "--logfile", serverIp, logfile, options,
+		"-s", "--bind", serverIp, "--logfile", logfile, options,
 	)
 }
 
 func (guest *Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
 
 	return guest.RunIperf3(
-		"-c", serverIp, "--bind", clientIp, "--format", "k", "--logfile", logfile, options,
+		"-c", serverIp, "--bind", clientIp, "--logfile", logfile, options,
 	)
 }
 

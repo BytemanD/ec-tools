@@ -25,26 +25,8 @@ type Job struct {
 	Pid      int
 	Logfile  string
 	Output   string
-	Sender   string
-	Receiver string
-}
-
-const Mb = 1000
-const Gb = Mb * 1000
-
-// return bandwith, unit
-func humanBandwidth(bandwidth int) string {
-	if !common.CONF.Iperf.ConvertBandwidthUnits {
-		return fmt.Sprintf("%d Kbits/sec", bandwidth)
-	}
-	switch {
-	case bandwidth >= Gb:
-		return fmt.Sprintf("%d Gbits/sec", bandwidth/Gb)
-	case bandwidth >= Mb:
-		return fmt.Sprintf("%d Mbits/sec", bandwidth/Mb)
-	default:
-		return fmt.Sprintf("%d Kbits/sec", bandwidth)
-	}
+	Sender   Bandwidth
+	Receiver Bandwidth
 }
 
 func installIperf(guest Guest) error {
@@ -75,7 +57,7 @@ func installIperf(guest Guest) error {
 // 参数为客户端和服务端虚拟机的连接消息，格式: "连接地址:虚拟机 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
-func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (int, int) {
+func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64, float64) {
 	clientGuest := Guest{
 		Connection: clientConn.Connection,
 		Domain:     clientConn.Domain,
@@ -166,44 +148,46 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (int, in
 		rowConfigAutoMerge, rowConfigAutoMerge, rowConfigAutoMerge,
 	)
 
-	senderReg := regexp.MustCompile(" +([0-9.]+) Kbits/sec .* +sender")
-	receiverReg := regexp.MustCompile(" +([0-9.]+) Kbits/sec .* +receiver")
+	senderReg := regexp.MustCompile(" +([0-9.]+) ([a-zA-Z]+)/sec .* +sender")
+	receiverReg := regexp.MustCompile(" +([0-9.]+) ([a-zA-Z]+)/sec .* +receiver")
 	var (
-		senderTotal   int
-		receiverTotal int
+		senderTotal   float64
+		receiverTotal float64
 	)
 	for _, job := range jobs {
 		// 等待命令执行结束
 		clientGuest.getExecStatusOutput(job.Pid)
 		// 获取 sender 和 receiver
 		execResult := clientGuest.Cat(job.Logfile)
-
 		matchedSenders := senderReg.FindAllStringSubmatch(execResult.OutData, -1)
 		matchedReceivers := receiverReg.FindAllStringSubmatch(execResult.OutData, -1)
-
+		if len(matchedSenders) == 0 || len(matchedReceivers) == 0 {
+			logging.Error("sender or receiver not found")
+			return 0, 0
+		}
 		for _, matchedSender := range matchedSenders[len(matchedSenders)-1:] {
-			if len(matchedSender) >= 2 {
-				job.Sender = matchedSender[1]
-				number, _ := strconv.Atoi(job.Sender)
-				senderTotal += number
+			if len(matchedSender) >= 3 {
+				number, _ := strconv.ParseFloat(matchedSender[1], 64)
+				job.Sender = Bandwidth{Value: number, Unit: matchedSender[2]}
+				senderTotal += job.Sender.ToKbits()
 			}
 		}
 		for _, matchedReceiver := range matchedReceivers[len(matchedReceivers)-1:] {
 			if len(matchedReceiver) >= 2 {
-				job.Receiver = matchedReceiver[1]
-				number, _ := strconv.Atoi(job.Receiver)
-				receiverTotal += number
+				number, _ := strconv.ParseFloat(matchedReceiver[1], 64)
+				job.Receiver = Bandwidth{Value: number, Unit: matchedReceiver[2]}
+				receiverTotal += job.Receiver.ToKbits()
 			}
 		}
 		tableWriter.AppendRow(
 			table.Row{
 				fmt.Sprintf("%s -> %s", job.SourceIp, job.DestIp),
-				job.Sender + " KB/sec", job.Receiver + " KB/sec",
+				job.Sender.String(), job.Receiver.String(),
 			})
 	}
 
 	tableWriter.AppendFooter(table.Row{
-		"Total", humanBandwidth(senderTotal), humanBandwidth(receiverTotal),
+		"Total", HumanParseBandwidth(senderTotal), HumanParseBandwidth(receiverTotal),
 	})
 
 	tableWriter.SetOutputMirror(os.Stdout)
