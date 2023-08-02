@@ -224,7 +224,7 @@ func (guest Guest) HasCommand(command string) bool {
 }
 
 func (guest Guest) RpmInstall(packagePath string) error {
-	logging.Info("%s 安装 iperf3, 路径: %v", guest.Domain, packagePath)
+	logging.Info("[%s] 安装 %v", guest.Domain, packagePath)
 	result := guest.Exec(fmt.Sprintf("rpm -ivh %s", packagePath), true)
 	if result.Failed {
 		return fmt.Errorf("%s install failed, %s", packagePath, result.ErrData)
@@ -280,6 +280,6 @@ func (guest Guest) CopyFile(localFile string, remotePath string) (*string, error
 	}
 	bytes, err := io.ReadAll(f)
 	remoteFile := remotePath + "/" + filepath.Base(localFile)
-	logging.Info("复制文件 %s --> %s", localFile, remotePath)
+	logging.Info("[%s] 拷贝文件 %s --> %s", guest.Domain, localFile, remotePath)
 	return &remoteFile, guest.FileWrite(remoteFile, string(bytes))
 }

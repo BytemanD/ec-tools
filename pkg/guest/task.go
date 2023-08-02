@@ -28,56 +28,68 @@ type Job struct {
 
 func installIperf(guest Guest) error {
 	if common.CONF.Iperf.GuestPath != "" {
-		logging.Info("%s 安装 iperf3, 路径: %s", guest.Domain, common.CONF.Iperf.GuestPath)
+		logging.Info("%s 安装 iperf3, 文件路径: %s", guest.Domain,
+			common.CONF.Iperf.GuestPath)
 		if err := guest.RpmInstall(common.CONF.Iperf.GuestPath); err != nil {
 			return err
 		}
-	} else if common.CONF.Iperf.LocalPath != "" {
-		logging.Info("%s 拷贝 iperf3, 本地路径: %s", guest.Domain, common.CONF.Iperf.LocalPath)
-		remoteFile, err := guest.CopyFile(common.CONF.Iperf.LocalPath, "/tmp")
-		if err != nil {
-			return err
-		} else {
-
-			if err := guest.RpmInstall(*remoteFile); err != nil {
-				return err
-			}
-		}
-	} else {
+	} else if common.CONF.Iperf.LocalPath == "" {
 		return fmt.Errorf("iperf3 文件路径未配置")
+	}
+	logging.Info("[%s] 安装iperf3, 使用本地文件: %s", guest.Domain,
+		common.CONF.Iperf.LocalPath)
+	remoteFile, err := guest.CopyFile(common.CONF.Iperf.LocalPath, "/tmp")
+	if err != nil {
+		return err
+	}
+	if err := guest.RpmInstall(*remoteFile); err != nil {
+		return err
 	}
 	return nil
 }
 
 // 使用 iperf3 工具测试网络限速
 //
-// 参数为客户端和服务端虚拟机的连接地址，格式: "连接地址:虚拟机 UUID"。例如：
+// 参数为客户端和服务端实例的连接地址，格式: "连接地址:实例 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
-func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64, float64) {
+func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64, float64, error) {
 	clientGuest := Guest{
 		Connection: clientConn.Connection,
 		Domain:     clientConn.Domain,
 		QGATimeout: 60,
 		ByUUID:     true}
-	serverGuest := Guest{Connection: serverConn.Connection, Domain: serverConn.Domain, ByUUID: true}
+	serverGuest := Guest{
+		Connection: serverConn.Connection,
+		QGATimeout: 60,
+		Domain:     serverConn.Domain,
+		ByUUID:     true}
 	err := clientGuest.Connect()
-	if clientGuest.Domain == serverConn.Domain {
-		logging.Error("客户端和服务端虚拟机不能相同")
-		return 0, 0
+	if clientGuest.IsSame(serverGuest) {
+		logging.Error("客户端和服务端实例不能相同")
+		return 0, 0, err
 	}
-	logging.Info("连接客户端虚拟机: %s", clientGuest.Domain)
+	logging.Info("连接客户端实例: %s", clientGuest.Domain)
 	if err != nil {
-		logging.Error("连接客户端虚拟机失败, %s", err)
-		return 0, 0
+		logging.Error("连接客户端实例失败, %s", err)
+		return 0, 0, err
 	}
-	logging.Info("连接服务端虚拟机: %s", serverGuest.Domain)
+	logging.Info("连接服务端实例: %s", serverGuest.Domain)
 	err = serverGuest.Connect()
 	if err != nil {
-		logging.Error("连接服务端虚拟机失败, %s", err)
-		return 0, 0
+		logging.Error("连接服务端实例失败, %s", err)
+		return 0, 0, err
 	}
 
+	logging.Info("获取客户端和服务端实例IP地址")
+	clientAddresses := clientGuest.GetIpaddrs()
+	serverAddresses := serverGuest.GetIpaddrs()
+	logging.Info("客户端实例IP地址: %s", clientAddresses)
+	logging.Info("服务端实例IP地址: %s", serverAddresses)
+
+	if len(clientAddresses) == 0 || len(serverAddresses) == 0 {
+		logging.Fatal("客户端和服务端实例必须至少有一张启用的网卡")
+	}
 	if !clientGuest.HasCommand("iperf3") {
 		if err := installIperf(clientGuest); err != nil {
 			logging.Fatal("安装iperf失败, %s", err)
@@ -89,17 +101,6 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 		}
 	}
 
-	logging.Info("获取客户端和服务端虚拟机IP地址")
-	clientAddresses := clientGuest.GetIpaddrs()
-	serverAddresses := serverGuest.GetIpaddrs()
-
-	logging.Info("客户端虚拟机IP地址: %s", clientAddresses)
-	logging.Info("服务端虚拟机IP地址: %s", serverAddresses)
-
-	if len(clientAddresses) == 0 || len(serverAddresses) == 0 {
-		logging.Fatal("客户端和服务端虚拟机必须至少有一张启用的网卡")
-	}
-
 	fomatTime := time.Now().Format(time.RFC3339)
 	serverPids := []int{}
 	for _, serverAddress := range serverAddresses {
@@ -108,7 +109,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 		execResult := serverGuest.RunIperfServer(
 			serverAddress, logfile, common.CONF.Iperf.ServerOptions)
 		if execResult.Failed {
-			return 0, 0
+			return 0, 0, err
 		}
 		serverPids = append(serverPids, execResult.Pid)
 	}
@@ -137,6 +138,7 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 	for i, option := range strings.Split(common.CONF.Iperf.ClientOptions, " ") {
 		if option == "-t" || option == "--time" {
 			times, _ = strconv.Atoi(clientOptions[i+1])
+			break
 		}
 	}
 	logging.Info("等待测试结果(%ds) ...", times)
@@ -152,5 +154,5 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 		reports.Add(job.SourceIp, job.DestIp, execResult.OutData)
 	}
 	reports.Print()
-	return reports.SendTotal.Value, reports.ReceiveTotal.Value
+	return reports.SendTotal.Value, reports.ReceiveTotal.Value, nil
 }

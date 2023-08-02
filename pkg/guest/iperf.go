@@ -118,8 +118,9 @@ func (reports IperfReports) Print() {
 	tableWriter.Style().Format.Footer = text.FormatDefault
 	tableWriter.Style().Options.SeparateRows = true
 	tableWriter.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, AutoMerge: true, AlignHeader: text.AlignCenter,
-			Align: text.AlignCenter, AlignFooter: text.AlignCenter},
+		{Number: 1, AutoMerge: true, AlignHeader: text.AlignCenter},
+		{Number: 2, AutoMerge: true, AlignHeader: text.AlignCenter},
+		{Number: 3, AutoMerge: true, AlignHeader: text.AlignCenter},
 	})
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 	tableWriter.AppendHeader(

@@ -59,7 +59,10 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 	serverConn := guest.GuestConnection{Connection: serverVm.Host, Domain: serverVm.Id}
 
 	logging.Info("开始通过 QGA 测试")
-	senderTotal, receiverTotal := guest.TestNetQos(clientConn, serverConn)
+	senderTotal, receiverTotal, err := guest.TestNetQos(clientConn, serverConn)
+	if err != nil {
+		logging.Fatal("测试失败, %s", err)
+	}
 	logging.Info("出向带宽误差: %v %%", (senderTotal-inboundKb)*100.0/inboundKb)
 	logging.Info("入向带宽误差: %v %%", (receiverTotal-outboundKb)*100/outboundKb)
 }

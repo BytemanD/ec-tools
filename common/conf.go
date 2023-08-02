@@ -1,14 +1,14 @@
 package common
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 
-	"github.com/BytemanD/easygo/pkg/global/logging"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+
+	"github.com/BytemanD/easygo/pkg/global/logging"
 )
 
 var (
@@ -70,26 +70,20 @@ func fileExists(path string) bool {
 	return !fi.IsDir()
 }
 
-func LoadConf(confFiles []string) error {
-	if len(confFiles) == 0 {
-		confFiles = CONF_FILES
+func LoadConf(configFile string) error {
+	viper.SetConfigType("yaml")
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	} else {
+		viper.SetConfigName("ec-tools.yaml")
+		viper.AddConfigPath("./etc")
+		viper.AddConfigPath("/etc/ec-tools")
 	}
-	for _, file := range confFiles {
-		if !fileExists(file) {
-			continue
-		}
-		CONF_FILE = file
-		logging.Info("load conf from %s", file)
-		bytes, err := ioutil.ReadFile(file)
-		if err != nil {
-			return fmt.Errorf("load config %s failed: %s", file, err)
-		}
-		yaml.Unmarshal(bytes, &CONF)
-		break
+	err := viper.ReadInConfig()
+	if err != nil {
+		return err
 	}
-	if CONF_FILE == "" {
-		return fmt.Errorf("config file not found, find paths: %v", confFiles)
-	}
+	viper.Unmarshal(&CONF)
 	return nil
 }
 

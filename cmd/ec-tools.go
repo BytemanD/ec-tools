@@ -7,6 +7,7 @@ import (
 
 	"github.com/BytemanD/easygo/pkg/global/gitutils"
 	"github.com/BytemanD/easygo/pkg/global/logging"
+
 	"github.com/BytemanD/ec-tools/cmd/commands"
 	"github.com/BytemanD/ec-tools/common"
 )
@@ -25,12 +26,12 @@ func getVersion() string {
 func main() {
 	rootCmd := cobra.Command{
 		Use:     "ec-tools",
-		Short:   "常用工具合集",
-		Long:    "Golang 实现的EC工具合集",
+		Short:   "EC常用工具集",
+		Long:    "Golang 实现的EC工具集",
 		Version: getVersion(),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			debug, _ := cmd.Flags().GetBool("debug")
-			conf, _ := cmd.Flags().GetStringArray("conf")
+			conf, _ := cmd.Flags().GetString("conf")
 			level := logging.INFO
 			if debug {
 				level = logging.DEBUG
@@ -48,11 +49,11 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "显示Debug信息")
-	rootCmd.PersistentFlags().StringArrayP("conf", "c", common.CONF_FILES, "配置文件")
+	rootCmd.PersistentFlags().StringP("conf", "c", "", "自定义配置文件")
 
-	rootCmd.AddCommand(commands.QGACommand)
-	rootCmd.AddCommand(commands.TestNetQos)
-	rootCmd.AddCommand(commands.DumpConf)
-	rootCmd.AddCommand(commands.TestServer)
+	rootCmd.AddCommand(commands.QGACommand, commands.TestNetQos,
+		commands.DumpConf, commands.TestServer,
+		commands.TestGuestBps,
+	)
 	rootCmd.Execute()
 }
