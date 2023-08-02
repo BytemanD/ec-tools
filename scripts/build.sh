@@ -2,7 +2,12 @@
 function logInfo() {
     echo `date +%F-%T` "INFO" $0 $@ 1>&2
 }
-
+function logError() {
+    echo `date "+%F %T" ` "ERROR:" $@ 1>&2
+}
+function logWarn() {
+    echo `date "+%F %T" ` "WARN:" $@ 1>&2
+}
 function goBuild(){
     logInfo "编译项目"
     version=$(go run cmd/ec-tools.go -v |awk '{print $3}')
@@ -19,6 +24,13 @@ function goBuild(){
         chmod u+x dist/ec-tools
     else
         exit 1
+    fi
+    which upx > /dev/null 2>&1
+    if [[ $? -eq 0 ]]; then
+        logInfo "检测到工具 upx, 压缩可执行文件"
+        upx -q dist/ec-tools > /dev/null
+    else
+        logWarn "upx未安装, 不压缩可执行文件"
     fi
 }
 

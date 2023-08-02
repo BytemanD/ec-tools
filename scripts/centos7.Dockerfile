@@ -12,7 +12,12 @@ RUN yum install -y git
 RUN yum install -y libvirt-devel
 RUN yum install -y gcc
 RUN yum install -y rpm-build rpmdevtools
+RUN yum install -y which
 
+# Install upx
+RUN wget -q http://rpmfind.net/linux/epel/7/x86_64/Packages/u/ucl-1.03-24.el7.x86_64.rpm
+RUN wget -q http://rpmfind.net/linux/epel/7/x86_64/Packages/u/upx-3.96-9.el7.x86_64.rpm
+RUN rpm -ivh ucl-1.03-24.el7.x86_64.rpm upx-3.96-9.el7.x86_64.rpm
 
 # Build project
 FROM EC-Tools-Centos7-Base as EC-Tools-Centos7-Builder

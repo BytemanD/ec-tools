@@ -20,10 +20,11 @@ ec:
   Network:
 
 iperf:
-  # iperf rpm 包文件路径
-  guestPath: /root/iperf3-3.1.7-2.el7.x86_64.rpm
-  # iperf rpm 包本地路径
-  LocalPath:
+  # iperf3 rpm包文件路径
+  guestPath:
+  # iperf3 rpm包本地路径
+  # 例如: /root/iperf3-3.5-3.el8.x86_64.rpm
+  localPath: /your/path/of/iperf3
   serverOptions:
   clientOptions: -P 4 -t 10
 
