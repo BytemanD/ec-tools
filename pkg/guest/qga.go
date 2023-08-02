@@ -205,12 +205,15 @@ func (guest Guest) RunIperfServer(serverIp string, logfile string, options strin
 }
 
 func (guest Guest) RunIperfClient(clientIp string, serverIp string, logfile string, options string) ExecResult {
-
 	return guest.RunIperf3(
 		"-c", serverIp, "--bind", clientIp, "--logfile", logfile, options,
 	)
 }
-
+func (guest Guest) RunIperfClientUdp(clientIp string, serverIp string, logfile string, options string) ExecResult {
+	return guest.RunIperf3(
+		"-u", "-c", serverIp, "--bind", clientIp, "--logfile", logfile, options,
+	)
+}
 func (guest Guest) HasCommand(command string) bool {
 	execResult := guest.Exec(fmt.Sprintf("whereis %s", command), true)
 	if execResult.Failed {

@@ -53,7 +53,8 @@ func installIperf(guest Guest) error {
 // 参数为客户端和服务端实例的连接地址，格式: "连接地址:实例 UUID"。例如：
 //
 //	192.168.192.168:a6ee919a-4026-4f0b-8d7e-404950a91eb3
-func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64, float64, error) {
+func TestNetQos(clientConn GuestConnection, serverConn GuestConnection,
+	pps bool) (float64, float64, error) {
 	clientGuest := Guest{
 		Connection: clientConn.Connection,
 		Domain:     clientConn.Domain,
@@ -122,9 +123,16 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 	for i := 0; i < len(clientAddresses) && i < len(serverAddresses); i++ {
 		logfile := fmt.Sprintf("/tmp/iperf3_c_%s_%s", fomatTime, serverAddresses[i])
 		logging.Info("启动客户端: %s -> %s", clientAddresses[i], serverAddresses[i])
-		execResult := clientGuest.RunIperfClient(
-			clientAddresses[i], serverAddresses[i], logfile,
-			common.CONF.Iperf.ClientOptions)
+		var execResult ExecResult
+		if !pps {
+			execResult = clientGuest.RunIperfClient(
+				clientAddresses[i], serverAddresses[i], logfile,
+				common.CONF.Iperf.ClientOptions)
+		} else {
+			execResult = clientGuest.RunIperfClientUdp(
+				clientAddresses[i], serverAddresses[i], logfile,
+				common.CONF.Iperf.ClientOptions)
+		}
 		jobs = append(jobs, Job{
 			SourceIp: clientAddresses[i],
 			DestIp:   serverAddresses[i],
@@ -153,6 +161,10 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection) (float64
 		execResult := clientGuest.Cat(job.Logfile)
 		reports.Add(job.SourceIp, job.DestIp, execResult.OutData)
 	}
-	reports.Print()
+	if !pps {
+		reports.PrintBps()
+	} else {
+		reports.PrintPps()
+	}
 	return reports.SendTotal.Value, reports.ReceiveTotal.Value, nil
 }

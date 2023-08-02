@@ -1,7 +1,6 @@
 package common
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
 
@@ -52,22 +51,12 @@ type Iperf struct {
 	LocalPath     string `yaml:"localPath"`
 	ServerOptions string `yaml:"serverOptions"`
 	ClientOptions string `yaml:"clientOptions"`
-	// 输出QOS结果时，自动转化带宽单位
-	ConvertBandwidthUnits bool `yaml:"convertBandwidthUnits"`
 }
 
 type TestServer struct {
 	Times           int  `yaml:"times"`
 	ContinueIfError bool `yaml:"continueIfError"`
 	Workers         int  `yaml:"workers"`
-}
-
-func fileExists(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return !fi.IsDir()
 }
 
 func LoadConf(configFile string) error {

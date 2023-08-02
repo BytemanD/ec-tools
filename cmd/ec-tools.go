@@ -53,7 +53,7 @@ func main() {
 
 	rootCmd.AddCommand(commands.QGACommand, commands.TestNetQos,
 		commands.DumpConf, commands.TestServer,
-		commands.TestGuestBps,
+		commands.GuestIperf3Test,
 	)
 	rootCmd.Execute()
 }

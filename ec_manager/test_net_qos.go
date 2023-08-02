@@ -59,7 +59,7 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 	serverConn := guest.GuestConnection{Connection: serverVm.Host, Domain: serverVm.Id}
 
 	logging.Info("开始通过 QGA 测试")
-	senderTotal, receiverTotal, err := guest.TestNetQos(clientConn, serverConn)
+	senderTotal, receiverTotal, err := guest.TestNetQos(clientConn, serverConn, false)
 	if err != nil {
 		logging.Fatal("测试失败, %s", err)
 	}
