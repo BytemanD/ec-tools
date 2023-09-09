@@ -86,7 +86,6 @@ func (r IperfReport) GetBpsSum() (*Bandwidth, *Bandwidth) {
 	matchedSenders := senderReg.FindAllStringSubmatch(r.Data, -1)
 	matchedReceivers := receiverReg.FindAllStringSubmatch(r.Data, -1)
 	if len(matchedSenders) == 0 || len(matchedReceivers) == 0 {
-		logging.Warning("sender or receiver not found")
 		return nil, nil
 	}
 	// NOTE: Only get the last matched item

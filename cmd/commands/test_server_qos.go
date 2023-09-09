@@ -1,16 +1,19 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/BytemanD/ec-tools/ec_manager"
 )
 
 var TestNetQos = &cobra.Command{
-	Use:   "server-iperf3-test [server]",
-	Short: "测试云主机网络QOS",
-	Long:  "基于iperf3工具测试两个虚拟机的网络QOS",
-	Args:  cobra.ExactArgs(1),
+	Use:     "server-iperf3-test [server] --client [client]",
+	Short:   "测试云主机网络QOS",
+	Long:    "基于iperf3工具测试两个虚拟机的网络QOS",
+	Example: strings.TrimRight(SERVER_IPERF3_TEST_EXAMPLE, "\n"),
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client, _ := cmd.Flags().GetString("client")
 		pps, _ := cmd.Flags().GetBool("pps")

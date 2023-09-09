@@ -20,9 +20,9 @@ ec:
   Network:
 
 iperf:
-  # iperf3 rpm包文件路径
+  # iperf3 rpm包虚拟机内部文件路径
   guestPath:
-  # iperf3 rpm包本地路径
+  # iperf3 rpm包本地文件路径
   # 例如: /root/iperf3-3.5-3.el8.x86_64.rpm
   localPath: /your/path/of/iperf3
   serverOptions:
