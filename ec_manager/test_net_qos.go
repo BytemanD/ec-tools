@@ -13,7 +13,7 @@ import (
 	"github.com/BytemanD/ec-tools/pkg/openstack/compute"
 )
 
-func (manager *ECManager) TestNetQos(clientId string, serverId string) {
+func (manager *ECManager) TestNetQos(serverId string, clientId string, pps bool) {
 	var (
 		clientVm, serverVm compute.Server
 	)
@@ -58,13 +58,17 @@ func (manager *ECManager) TestNetQos(clientId string, serverId string) {
 	clientConn := guest.GuestConnection{Connection: clientVm.Host, Domain: clientVm.Id}
 	serverConn := guest.GuestConnection{Connection: serverVm.Host, Domain: serverVm.Id}
 
-	logging.Info("开始通过 QGA 测试")
-	senderTotal, receiverTotal, err := guest.TestNetQos(clientConn, serverConn, false)
+	logging.Info("启动QGA测试")
+	senderTotal, receiverTotal, err := guest.TestNetQos(clientConn, serverConn, pps)
 	if err != nil {
 		logging.Fatal("测试失败, %s", err)
 	}
-	logging.Info("出向带宽误差: %v %%", (senderTotal-inboundKb)*100.0/inboundKb)
-	logging.Info("入向带宽误差: %v %%", (receiverTotal-outboundKb)*100/outboundKb)
+	if inboundKb != 0 {
+		logging.Info("出向带宽误差: %v %%", (senderTotal-inboundKb)*100.0/inboundKb)
+	}
+	if outboundKb != 0 {
+		logging.Info("入向带宽误差: %v %%", (receiverTotal-outboundKb)*100/outboundKb)
+	}
 }
 func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server) (float64, float64) {
 	tableWriter := table.NewWriter()
@@ -77,19 +81,19 @@ func PrintVmQosSetting(clientServer compute.Server, serverServer compute.Server)
 	tableWriter.AppendHeader(header2, rowConfigAutoMerge)
 	tableWriter.AppendRow(
 		table.Row{
-			clientServer.Id + "(Client)",
-			clientServer.Flavor.ExtraSpecs["quota:vif_inbound_burst"],
-			clientServer.Flavor.ExtraSpecs["quota:vif_outbound_burst"],
-			clientServer.Flavor.ExtraSpecs["quota:vif_inbound_pps_burst"],
-			clientServer.Flavor.ExtraSpecs["quota:vif_outbound_pps_burst"],
-		})
-	tableWriter.AppendRow(
-		table.Row{
 			serverServer.Id + "(Server)",
 			serverServer.Flavor.ExtraSpecs["quota:vif_inbound_burst"],
 			serverServer.Flavor.ExtraSpecs["quota:vif_outbound_burst"],
 			serverServer.Flavor.ExtraSpecs["quota:vif_inbound_pps_burst"],
 			serverServer.Flavor.ExtraSpecs["quota:vif_outbound_pps_burst"],
+		})
+	tableWriter.AppendRow(
+		table.Row{
+			clientServer.Id + "(Client)",
+			clientServer.Flavor.ExtraSpecs["quota:vif_inbound_burst"],
+			clientServer.Flavor.ExtraSpecs["quota:vif_outbound_burst"],
+			clientServer.Flavor.ExtraSpecs["quota:vif_inbound_pps_burst"],
+			clientServer.Flavor.ExtraSpecs["quota:vif_outbound_pps_burst"],
 		})
 
 	tableWriter.SetOutputMirror(os.Stdout)

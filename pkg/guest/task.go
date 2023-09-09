@@ -48,7 +48,7 @@ func installIperf(guest Guest) error {
 	return nil
 }
 
-// 使用 iperf3 工具测试网络限速
+// 使用 iperf3 工具测试网络BPS/PPS
 //
 // 参数为客户端和服务端实例的连接地址，格式: "连接地址:实例 UUID"。例如：
 //
@@ -101,6 +101,17 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection,
 			logging.Fatal("安装iperf失败, %s", err)
 		}
 	}
+	clientOptions := strings.Split(common.CONF.Iperf.ClientOptions, " ")
+	times := 10
+	for i, option := range strings.Split(common.CONF.Iperf.ClientOptions, " ") {
+		if option == "-t" || option == "--time" {
+			times, _ = strconv.Atoi(clientOptions[i+1])
+			break
+		}
+	}
+	if pps {
+		common.CONF.Iperf.ClientOptions += "-l 16"
+	}
 
 	fomatTime := time.Now().Format(time.RFC3339)
 	serverPids := []int{}
@@ -119,7 +130,6 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection,
 	}
 
 	jobs := []Job{}
-
 	for i := 0; i < len(clientAddresses) && i < len(serverAddresses); i++ {
 		logfile := fmt.Sprintf("/tmp/iperf3_c_%s_%s", fomatTime, serverAddresses[i])
 		logging.Info("启动客户端: %s -> %s", clientAddresses[i], serverAddresses[i])
@@ -141,14 +151,6 @@ func TestNetQos(clientConn GuestConnection, serverConn GuestConnection,
 		})
 	}
 
-	clientOptions := strings.Split(common.CONF.Iperf.ClientOptions, " ")
-	times := 10
-	for i, option := range strings.Split(common.CONF.Iperf.ClientOptions, " ") {
-		if option == "-t" || option == "--time" {
-			times, _ = strconv.Atoi(clientOptions[i+1])
-			break
-		}
-	}
 	logging.Info("等待测试结果(%ds) ...", times)
 	time.Sleep(time.Second * time.Duration(times))
 	for _, job := range jobs {
