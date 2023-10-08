@@ -42,6 +42,6 @@ var QGACommand = &cobra.Command{
 }
 
 func init() {
-	QGACommand.Flags().StringVarP(&connection, "connection", "c", "localhost", "连接地址")
+	QGACommand.Flags().StringVar(&connection, "connection", "localhost", "连接地址")
 	QGACommand.Flags().BoolVarP(&uuid, "uuid", "u", false, "通过 UUID 查找")
 }
