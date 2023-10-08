@@ -274,15 +274,15 @@ func (guest Guest) FileWrite(filePath string, content string) error {
 	return nil
 }
 
-func (guest Guest) CopyFile(localFile string, remotePath string) (*string, error) {
+func (guest Guest) CopyFile(localFile string, remotePath string) (string, error) {
 	// TODO: 限制文件大小 <= 160k
 	f, err := os.OpenFile(localFile, os.O_RDONLY, 0666)
 	defer f.Close()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	bytes, err := io.ReadAll(f)
 	remoteFile := remotePath + "/" + filepath.Base(localFile)
 	logging.Info("[%s] 拷贝文件 %s --> %s", guest.Domain, localFile, remotePath)
-	return &remoteFile, guest.FileWrite(remoteFile, string(bytes))
+	return remoteFile, guest.FileWrite(remoteFile, string(bytes))
 }

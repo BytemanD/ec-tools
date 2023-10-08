@@ -27,7 +27,7 @@ ARG DATE
 
 RUN echo ${DATE}
 RUN go env -w GO111MODULE="on" \
-    && go env -w GOPROXY="https://mirrors.aliyun.com/goproxy/,direct" \
+    && go env -w GOPROXY="https://goproxy.io,direct" \
     && cd /root/ec-tools \
     && sh scripts/build.sh
 RUN cd /root/ec-tools \

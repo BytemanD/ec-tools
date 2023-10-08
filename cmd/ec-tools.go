@@ -39,7 +39,7 @@ func main() {
 			logging.BasicConfig(logging.LogConfig{Level: level})
 			err := common.LoadConf(conf)
 			if err != nil && cmd.Name() != commands.DumpConf.Name() {
-				logging.Fatal("加载配置文件失败, %s", err)
+				logging.Warning("加载配置文件失败, %s", err)
 			}
 			if !debug && common.CONF.Debug {
 				logging.BasicConfig(logging.LogConfig{Level: logging.DEBUG})
@@ -51,7 +51,9 @@ func main() {
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "显示Debug信息")
 	rootCmd.PersistentFlags().StringP("conf", "c", "", "自定义配置文件")
 
-	rootCmd.AddCommand(commands.QGACommand, commands.TestNetQos,
+	rootCmd.AddCommand(
+		commands.QGACommand, commands.CopyCommand,
+		commands.TestNetQos,
 		commands.DumpConf, commands.TestServer,
 		commands.GuestIperf3Test,
 	)
