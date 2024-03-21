@@ -28,12 +28,15 @@ type Job struct {
 
 func installIperf(guest Guest) error {
 	if common.CONF.Iperf.GuestPath != "" {
-		logging.Info("%s 安装 iperf3, 文件路径: %s", guest.Domain,
+		logging.Info("[%s] 安装 iperf3, 文件路径: %s", guest.Domain,
 			common.CONF.Iperf.GuestPath)
-		if err := guest.RpmInstall(common.CONF.Iperf.GuestPath); err != nil {
-			return err
+		if err := guest.RpmInstall(common.CONF.Iperf.GuestPath); err == nil {
+			return nil
+		} else {
+			logging.Warning("安装失败: %s", err)
 		}
-	} else if common.CONF.Iperf.LocalPath == "" {
+	}
+	if common.CONF.Iperf.LocalPath == "" {
 		return fmt.Errorf("iperf3 文件路径未配置")
 	}
 	logging.Info("[%s] 安装iperf3, 使用本地文件: %s", guest.Domain,
